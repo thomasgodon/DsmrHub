@@ -17,11 +17,13 @@ internal class DsmrProcessorService : IDsmrProcessorService
     private readonly ILogger<DsmrProcessorService> _logger;
     private readonly StringBuilder _buffer = new();
     private readonly Parser _dsmrParser;
+    private readonly IEnumerable<IDsmrProcessor> _dsmrProcessors;
 
-    public DsmrProcessorService(Parser dsmrParser, ILogger<DsmrProcessorService> logger)
+    public DsmrProcessorService(Parser dsmrParser, ILogger<DsmrProcessorService> logger, IEnumerable<IDsmrProcessor> dsmrProcessors)
     {
         _dsmrParser = dsmrParser;
         _logger = logger;
+        _dsmrProcessors = dsmrProcessors;
     }
 
     public async Task ProcessMessage(string message, CancellationToken cancellationToken)
@@ -32,8 +34,12 @@ internal class DsmrProcessorService : IDsmrProcessorService
 
             foreach (var telegram in telegrams)
             {
-                var parsedTelegram = JsonConvert.SerializeObject(telegram);
-                _logger.LogInformation(parsedTelegram);
+                _logger.LogTrace(telegram.ToString());
+
+                foreach (var dsmrProcessor in _dsmrProcessors)
+                {
+                    await dsmrProcessor.ProcessTelegram(telegram);
+                }
             }
         }
         catch (Exception e)
