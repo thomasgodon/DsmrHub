@@ -7,7 +7,7 @@ namespace DsmrOpcUa.Mqtt.Extensions
         public static IServiceCollection AddMqttBroker(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             //serviceCollection.Configure<DsmrOptions>(configuration.GetSection(nameof(DsmrOptions)));
-            serviceCollection.AddTransient<IDsmrProcessor, MqttBroker>().AddSingleton<IMqttBroker, MqttBroker>();
+            serviceCollection.AddTransient<IDsmrProcessor, MqttBroker>();
 
             return serviceCollection;
         }

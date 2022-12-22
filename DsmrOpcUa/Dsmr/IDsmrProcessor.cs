@@ -9,6 +9,6 @@ namespace DsmrOpcUa.Dsmr
 {
     public interface IDsmrProcessor
     {
-        Task ProcessTelegram(Telegram telegram);
+        Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken);
     }
 }

@@ -38,7 +38,7 @@ internal class DsmrProcessorService : IDsmrProcessorService
 
                 foreach (var dsmrProcessor in _dsmrProcessors)
                 {
-                    await dsmrProcessor.ProcessTelegram(telegram);
+                    await dsmrProcessor.ProcessTelegram(telegram, cancellationToken);
                 }
             }
         }

@@ -10,7 +10,7 @@ namespace DsmrOpcUa.OpcUaServer.Extensions
         public static IServiceCollection AddOpcUaServer(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             //serviceCollection.Configure<DsmrOptions>(configuration.GetSection(nameof(DsmrOptions)));
-            serviceCollection.AddTransient<IDsmrProcessor, OpcUaServer>().AddSingleton<IOpcUaServer, OpcUaServer>();
+            serviceCollection.AddTransient<IDsmrProcessor, OpcUaServer>();
 
             return serviceCollection;
         }

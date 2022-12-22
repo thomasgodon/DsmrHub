@@ -5,10 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using DsmrOpcUa.Dsmr;
 using DsmrParser.Models;
+using MQTTnet.Server;
+using MQTTnet;
 
 namespace DsmrOpcUa.Mqtt
 {
-    internal class MqttBroker : IDsmrProcessor, IMqttBroker
+    internal class MqttBroker : IDsmrProcessor
     {
         private readonly ILogger<MqttBroker> _logger;
 
@@ -17,14 +19,16 @@ namespace DsmrOpcUa.Mqtt
             _logger = logger;
         }
 
-        public void Start()
+        public async Task Start(CancellationToken cancellationToken)
         {
-
+            var mqttServerOptions = new MqttServerOptions();
+            var mqttServer = new MqttFactory().CreateMqttServer(mqttServerOptions);
+            await mqttServer.StartAsync();
         }
 
-        Task IDsmrProcessor.ProcessTelegram(Telegram telegram)
+        Task IDsmrProcessor.ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 }

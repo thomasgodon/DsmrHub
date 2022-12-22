@@ -9,23 +9,16 @@ using Opc.UaFx.Server;
 
 namespace DsmrOpcUa.OpcUaServer
 {
-    internal class OpcUaServer : IDsmrProcessor, IOpcUaServer
+    internal class OpcUaServer : IDsmrProcessor
     {
         private readonly ILogger<OpcUaServer> _logger;
 
         public OpcUaServer(ILogger<OpcUaServer> logger)
         {
             _logger = logger;
-            Start();
         }
 
-        public void Start()
-        {
-            using var server = new OpcServer("opc.tcp://localhost:50000/");
-            server.Start();
-        }
-
-        Task IDsmrProcessor.ProcessTelegram(Telegram telegram)
+        Task IDsmrProcessor.ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
         }
