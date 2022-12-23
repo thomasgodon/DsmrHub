@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using DsmrOpcUa.Dsmr;
@@ -10,25 +11,38 @@ using MQTTnet;
 
 namespace DsmrOpcUa.Mqtt
 {
-    internal class MqttBroker : IDsmrProcessor
+    internal class MqttBroker : IMqttBroker
     {
         private readonly ILogger<MqttBroker> _logger;
+        private MqttServer _server;
+        private MqttServerOptions _serverOptions;
 
         public MqttBroker(ILogger<MqttBroker> logger)
         {
             _logger = logger;
+
+            _serverOptions = BuildServerOptions();
+            _server = new MqttFactory().CreateMqttServer(_serverOptions);
         }
 
-        public async Task Start(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var mqttServerOptions = new MqttServerOptions();
-            var mqttServer = new MqttFactory().CreateMqttServer(mqttServerOptions);
-            await mqttServer.StartAsync();
+            if (!_server.IsStarted)
+            {
+                await _server.StartAsync().WaitAsync(cancellationToken);
+                _logger.LogInformation($"{nameof(MqttBroker)} started on port: {_serverOptions.DefaultEndpointOptions.Port}");
+            }
         }
 
-        Task IDsmrProcessor.ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
+        private static MqttServerOptions BuildServerOptions()
         {
-            return Task.CompletedTask;
+            var optionsBuilder = new MqttServerOptionsBuilder()
+                .WithConnectionBacklog(100)
+                .WithDefaultEndpoint()
+                .WithDefaultEndpointPort(1883)
+                .WithDefaultEndpointBoundIPAddress(IPAddress.Any);
+
+            return optionsBuilder.Build();
         }
     }
 }

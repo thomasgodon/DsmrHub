@@ -9,7 +9,8 @@ IHost host = Host.CreateDefaultBuilder(args)
         IConfiguration configuration = hostContext.Configuration;
         services.AddDsmrClient(configuration);
         services.AddOpcUaServer(configuration);
-        services.AddMqttBroker(configuration);
+        services.AddMqttBroker();
+        services.AddMqttClient();
         services.AddHostedService<Worker>();
     })
     .Build();

@@ -4,10 +4,16 @@ namespace DsmrOpcUa.Mqtt.Extensions
 {
     internal static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddMqttBroker(this IServiceCollection serviceCollection, IConfiguration configuration)
+        public static IServiceCollection AddMqttBroker(this IServiceCollection serviceCollection)
         {
-            //serviceCollection.Configure<DsmrOptions>(configuration.GetSection(nameof(DsmrOptions)));
-            serviceCollection.AddTransient<IDsmrProcessor, MqttBroker>();
+            serviceCollection.AddSingleton<IMqttBroker, MqttBroker>();
+
+            return serviceCollection;
+        }
+
+        public static IServiceCollection AddMqttClient(this IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddTransient<IDsmrProcessor, MqttClient>();
 
             return serviceCollection;
         }
