@@ -11,6 +11,7 @@ IHost host = Host.CreateDefaultBuilder(args)
         services.AddOpcUaServer(configuration);
         services.AddMqttBroker();
         services.AddMqttClient();
+        services.AddMqttConfiguration(configuration);
         services.AddHostedService<Worker>();
     })
     .Build();

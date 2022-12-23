@@ -1,4 +1,6 @@
 ﻿using DsmrOpcUa.Dsmr;
+using MQTTnet.Adapter;
+using MQTTnet.Client;
 
 namespace DsmrOpcUa.Mqtt.Extensions
 {
@@ -13,9 +15,14 @@ namespace DsmrOpcUa.Mqtt.Extensions
 
         public static IServiceCollection AddMqttClient(this IServiceCollection serviceCollection)
         {
-            serviceCollection.AddTransient<IDsmrProcessor, MqttClient>();
+            serviceCollection.AddTransient<IDsmrProcessor, MqttProcessor>();
 
             return serviceCollection;
+        }
+
+        public static IServiceCollection AddMqttConfiguration(this IServiceCollection serviceCollection, IConfiguration configuration)
+        {
+            return serviceCollection.Configure<MqttOptions>(configuration.GetSection(nameof(MqttOptions)));
         }
     }
 }
