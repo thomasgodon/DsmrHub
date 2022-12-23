@@ -21,8 +21,6 @@ namespace DsmrOpcUa.Mqtt
         private readonly MqttServerOptions _serverOptions;
         private readonly MqttOptions _mqttOptions;
 
-        public int Port => _serverOptions.DefaultEndpointOptions.Port;
-
         public MqttBroker(ILogger<MqttBroker> logger, IOptions<MqttOptions> mqttOptions)
         {
             _logger = logger;

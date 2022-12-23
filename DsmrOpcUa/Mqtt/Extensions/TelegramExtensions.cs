@@ -13,11 +13,10 @@ namespace DsmrOpcUa.Mqtt.Extensions
         public static MqttApplicationMessage? ToApplicationMessage(this Telegram telegram, string property)
         {
             var value = telegram.GetType().GetProperty(property)?.GetValue(telegram, null);
-            if (value == null) return null;
 
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic($"dsmr/{property}")
-                .WithPayload(value.ToString())
+                .WithPayload(value?.ToString() ?? string.Empty)
                 .Build();
 
             return message;
