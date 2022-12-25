@@ -24,29 +24,30 @@ namespace DsmrHub.Dsmr
             _serialPort.Parity = (Parity)_dsmrClientOptions.Parity;
         }
 
-        public Task Start(CancellationToken cancellationToken)
+        public async Task Start(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
+                    _logger.LogInformation($"connection to {_dsmrClientOptions.ComPort} initializing");
                     _serialPort.DataReceived += async (sender, args) =>
                     {
                         await ProcessReceivedData(_serialPort.ReadExisting(), cancellationToken);
                     };
                     _serialPort.Open();
+                    await Task.Delay(Timeout.Infinite, cancellationToken);
                 }
                 catch (Exception e)
                 {
                     _logger.LogError(e, e.Message);
                 }
 
-                _logger.LogInformation($"{_dsmrClientOptions.ComPort} connection opened...");
+                if (cancellationToken.IsCancellationRequested) continue;
 
-                Console.ReadLine();
+                _logger.LogInformation("Retry in 5 seconds.");
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
-
-            return Task.CompletedTask;
         }
 
         private async Task ProcessReceivedData(string receivedData, CancellationToken cancellationToken)
