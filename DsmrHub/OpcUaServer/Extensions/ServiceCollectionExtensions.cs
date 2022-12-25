@@ -7,7 +7,7 @@ namespace DsmrHub.OpcUaServer.Extensions
         public static IServiceCollection AddOpcUaServer(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             //serviceCollection.Configure<DsmrOptions>(configuration.GetSection(nameof(DsmrOptions)));
-            serviceCollection.AddTransient<IDsmrProcessor, DsmrHub.OpcUaServer.OpcUaServer>();
+            //serviceCollection.AddTransient<IDsmrProcessor, OpcUaServer>();
 
             return serviceCollection;
         }
