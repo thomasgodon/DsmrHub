@@ -1,16 +1,13 @@
-﻿using System.IO.Ports;
-using DsmrIotDevice.Dsmr;
-using DsmrOpcUa.Dsmr;
-using DsmrParser.Dsmr;
+﻿using DsmrHub.Dsmr;
 
-namespace DsmrOpcUa.OpcUaServer.Extensions
+namespace DsmrHub.OpcUaServer.Extensions
 {
     internal static class ServiceCollectionExtensions
     {
         public static IServiceCollection AddOpcUaServer(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             //serviceCollection.Configure<DsmrOptions>(configuration.GetSection(nameof(DsmrOptions)));
-            serviceCollection.AddTransient<IDsmrProcessor, OpcUaServer>();
+            serviceCollection.AddTransient<IDsmrProcessor, DsmrHub.OpcUaServer.OpcUaServer>();
 
             return serviceCollection;
         }

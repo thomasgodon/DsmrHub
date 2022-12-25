@@ -1,8 +1,6 @@
-﻿using DsmrOpcUa.Dsmr;
-using MQTTnet.Adapter;
-using MQTTnet.Client;
+﻿using DsmrHub.Dsmr;
 
-namespace DsmrOpcUa.Mqtt.Extensions
+namespace DsmrHub.Mqtt.Extensions
 {
     internal static class ServiceCollectionExtensions
     {

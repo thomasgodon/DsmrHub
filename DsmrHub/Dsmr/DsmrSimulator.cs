@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using DsmrIotDevice.Dsmr;
+﻿using System.Text;
 using Microsoft.Extensions.Options;
 
-namespace DsmrOpcUa.Dsmr
+namespace DsmrHub.Dsmr
 {
     internal class DsmrSimulator : IDsmrSimulator
     {

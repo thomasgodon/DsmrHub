@@ -1,12 +1,11 @@
-﻿using DsmrOpcUa.Dsmr;
-using DsmrOpcUa.Mqtt.Extensions;
+﻿using DsmrHub.Dsmr;
+using DsmrHub.Mqtt.Extensions;
 using DsmrParser.Models;
 using Microsoft.Extensions.Options;
 using MQTTnet;
 using MQTTnet.Client;
-using MQTTnet.Diagnostics;
 
-namespace DsmrOpcUa.Mqtt;
+namespace DsmrHub.Mqtt;
 
 internal class MqttProcessor : IDsmrProcessor
 {

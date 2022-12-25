@@ -1,7 +1,7 @@
-using DsmrOpcUa;
-using DsmrOpcUa.Dsmr.Extensions;
-using DsmrOpcUa.Mqtt.Extensions;
-using DsmrOpcUa.OpcUaServer.Extensions;
+using DsmrHub;
+using DsmrHub.Dsmr.Extensions;
+using DsmrHub.Mqtt.Extensions;
+using DsmrHub.OpcUaServer.Extensions;
 
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>

@@ -1,4 +1,4 @@
-﻿namespace DsmrOpcUa.Dsmr;
+﻿namespace DsmrHub.Dsmr;
 
 public interface IDsmrSimulator
 {

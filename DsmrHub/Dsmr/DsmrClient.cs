@@ -1,15 +1,7 @@
-﻿using DsmrIotDevice.Dsmr;
-using DsmrParser.Dsmr;
+﻿using System.IO.Ports;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.IO.Ports;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
-namespace DsmrOpcUa.Dsmr
+namespace DsmrHub.Dsmr
 {
     internal class DsmrClient : IDsmrClient
     {

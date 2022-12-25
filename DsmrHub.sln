@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32804.467
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DsmrOpcUa", "DsmrOpcUa\DsmrOpcUa.csproj", "{9F671DB3-3714-4558-ACCE-8B94906C4048}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DsmrHub", "DsmrHub\DsmrHub.csproj", "{39B75CB0-05EC-4916-A6B5-859C7E00888B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +11,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9F671DB3-3714-4558-ACCE-8B94906C4048}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9F671DB3-3714-4558-ACCE-8B94906C4048}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9F671DB3-3714-4558-ACCE-8B94906C4048}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9F671DB3-3714-4558-ACCE-8B94906C4048}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39B75CB0-05EC-4916-A6B5-859C7E00888B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39B75CB0-05EC-4916-A6B5-859C7E00888B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39B75CB0-05EC-4916-A6B5-859C7E00888B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39B75CB0-05EC-4916-A6B5-859C7E00888B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

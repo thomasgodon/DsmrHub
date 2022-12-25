@@ -1,8 +1,7 @@
-﻿using DsmrIotDevice.Dsmr;
+﻿using System.IO.Ports;
 using DsmrParser.Dsmr;
-using System.IO.Ports;
 
-namespace DsmrOpcUa.Dsmr.Extensions
+namespace DsmrHub.Dsmr.Extensions
 {
     internal static class ServiceCollectionExtensions
     {

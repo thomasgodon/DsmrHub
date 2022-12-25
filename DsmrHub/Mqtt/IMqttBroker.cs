@@ -1,4 +1,4 @@
-﻿namespace DsmrOpcUa.Mqtt;
+﻿namespace DsmrHub.Mqtt;
 
 internal interface IMqttBroker
 {

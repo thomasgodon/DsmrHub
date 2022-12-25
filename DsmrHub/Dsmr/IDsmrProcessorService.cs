@@ -1,6 +1,4 @@
-﻿using DsmrParser.Models;
-
-namespace DsmrOpcUa.Dsmr;
+﻿namespace DsmrHub.Dsmr;
 
 internal interface IDsmrProcessorService
 {

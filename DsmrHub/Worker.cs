@@ -1,12 +1,7 @@
-using System.IO.Ports;
-using System.Text;
-using DsmrIotDevice.Dsmr;
-using DsmrOpcUa.Dsmr;
-using Microsoft.Azure.Devices.Client;
+using DsmrHub.Dsmr;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 
-namespace DsmrOpcUa
+namespace DsmrHub
 {
     public class Worker : BackgroundService
     {

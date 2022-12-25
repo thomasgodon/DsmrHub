@@ -1,16 +1,7 @@
-﻿using Microsoft.Azure.Amqp.Framing;
-using Microsoft.Azure.Devices.Client;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using DsmrParser.Models;
+﻿using System.Text;
 using DsmrParser.Dsmr;
-using DotNetty.Codecs.Mqtt.Packets;
 
-namespace DsmrOpcUa.Dsmr;
+namespace DsmrHub.Dsmr;
 
 internal class DsmrProcessorService : IDsmrProcessorService
 {
