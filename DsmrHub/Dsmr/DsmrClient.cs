@@ -1,4 +1,5 @@
 ﻿using System.IO.Ports;
+using System.Text;
 using Microsoft.Extensions.Options;
 
 namespace DsmrHub.Dsmr
@@ -9,6 +10,8 @@ namespace DsmrHub.Dsmr
         private readonly SerialPort _serialPort;
         private readonly DsmrOptions _dsmrClientOptions;
         private readonly IDsmrProcessorService _dsmrProcessorService;
+        private readonly Queue<string> _queue;
+        private readonly object _queueLock = new();
 
         public DsmrClient(ILogger<DsmrClient> logger, SerialPort serialPort, IDsmrProcessorService dsmrProcessorService, IOptions<DsmrOptions> dsmrClientOptions)
         {
@@ -16,6 +19,7 @@ namespace DsmrHub.Dsmr
             _serialPort = serialPort;
             _dsmrClientOptions = dsmrClientOptions.Value;
             _dsmrProcessorService = dsmrProcessorService;
+            _queue = new Queue<string>();
 
             _serialPort.PortName = _dsmrClientOptions.ComPort;
             _serialPort.BaudRate = _dsmrClientOptions.BaudRate;
@@ -31,12 +35,15 @@ namespace DsmrHub.Dsmr
                 try
                 {
                     _logger.LogInformation($"connection to {_dsmrClientOptions.ComPort} initializing");
-                    _serialPort.DataReceived += async (sender, args) =>
+                    _serialPort.DataReceived += (sender, args) =>
                     {
-                        await ProcessReceivedData(_serialPort.ReadExisting(), cancellationToken);
+                        lock (_queueLock)
+                        {
+                            _queue.Enqueue(_serialPort.ReadExisting());
+                        }
                     };
                     _serialPort.Open();
-                    await Task.Delay(Timeout.Infinite, cancellationToken);
+                    await ProcessReceivedData(cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -50,10 +57,23 @@ namespace DsmrHub.Dsmr
             }
         }
 
-        private async Task ProcessReceivedData(string receivedData, CancellationToken cancellationToken)
+        private async Task ProcessReceivedData(CancellationToken cancellationToken)
         {
-            await _dsmrProcessorService.ProcessMessage(receivedData, cancellationToken);
-            _logger.LogTrace(receivedData);
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var buffer = new StringBuilder();
+
+;               lock (_queueLock)
+                {
+                    while (_queue.Count > 0)
+                    {
+                        buffer.Append(_queue.Dequeue());
+                    }
+                }
+
+                await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
+                _logger.LogTrace(buffer.ToString());
+            }
         }
     }
 }
