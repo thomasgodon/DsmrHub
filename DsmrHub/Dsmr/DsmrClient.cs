@@ -59,12 +59,18 @@ namespace DsmrHub.Dsmr
 
         private async Task ProcessReceivedData(CancellationToken cancellationToken)
         {
+            var buffer = new StringBuilder();
             while (!cancellationToken.IsCancellationRequested)
             {
-                var buffer = new StringBuilder();
+                await Task.Delay(100, cancellationToken);
 
-;               lock (_queueLock)
+                lock (_queueLock)
                 {
+                    if (_queue.Count == 0)
+                    {
+                        continue;
+                    }
+
                     while (_queue.Count > 0)
                     {
                         buffer.Append(_queue.Dequeue());
@@ -73,6 +79,7 @@ namespace DsmrHub.Dsmr
 
                 await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
                 _logger.LogTrace(buffer.ToString());
+                buffer.Clear();
             }
         }
     }
