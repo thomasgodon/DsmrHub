@@ -31,6 +31,7 @@ namespace DsmrHub.Dsmr
                     if (!line.StartsWith('!')) continue;
 
                     await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
+                    buffer.Clear();
                     await Task.Delay(TimeSpan.FromSeconds(_dsmrOptions.SimulationRateInSeconds ?? 1), cancellationToken);
                 }
             }
