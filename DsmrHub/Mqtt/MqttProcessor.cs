@@ -25,6 +25,7 @@ internal class MqttProcessor : IDsmrProcessor
 
     async Task IDsmrProcessor.ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
     {
+        if (!_mqttOptions.Enabled) return;
         await StartBroker(cancellationToken);
         await ConnectToBroker(cancellationToken);
         await SendTelegram(telegram, cancellationToken);
