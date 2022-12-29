@@ -1,4 +1,4 @@
-﻿using DsmrParser.Models;
+﻿using DSMRParser.Models;
 
 namespace DsmrHub.Dsmr
 {

@@ -1,7 +1,7 @@
 ﻿using DsmrHub.Dsmr;
 using DsmrHub.Dsmr.Extensions;
 using DsmrHub.Udp.Extensions;
-using DsmrParser.Models;
+using DSMRParser.Models;
 using Microsoft.Extensions.Options;
 
 namespace DsmrHub.Udp

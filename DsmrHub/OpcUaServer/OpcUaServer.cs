@@ -1,5 +1,5 @@
 ﻿using DsmrHub.Dsmr;
-using DsmrParser.Models;
+using DSMRParser.Models;
 
 namespace DsmrHub.OpcUaServer
 {

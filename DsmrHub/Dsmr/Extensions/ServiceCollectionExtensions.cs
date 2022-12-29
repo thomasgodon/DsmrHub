@@ -1,5 +1,4 @@
 ﻿using System.IO.Ports;
-using DsmrParser.Dsmr;
 
 namespace DsmrHub.Dsmr.Extensions
 {
@@ -11,7 +10,6 @@ namespace DsmrHub.Dsmr.Extensions
             serviceCollection.AddSingleton<IDsmrClient, DsmrClient>();
             serviceCollection.AddSingleton<IDsmrSimulator, DsmrSimulator>();
             serviceCollection.AddSingleton<IDsmrProcessorService, DsmrProcessorService>();
-            serviceCollection.AddSingleton<Parser>();
             serviceCollection.AddSingleton<SerialPort>();
 
             return serviceCollection;

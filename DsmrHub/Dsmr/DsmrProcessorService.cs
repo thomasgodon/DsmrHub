@@ -1,5 +1,6 @@
 ﻿using System.Text;
-using DsmrParser.Dsmr;
+using DSMRParser;
+using DSMRParser.Models;
 
 namespace DsmrHub.Dsmr;
 
@@ -7,12 +8,12 @@ internal class DsmrProcessorService : IDsmrProcessorService
 {
     private readonly ILogger<DsmrProcessorService> _logger;
     private readonly StringBuilder _buffer = new();
-    private readonly Parser _dsmrParser;
+    private readonly DSMRTelegramParser _dsmrParser;
     private readonly IEnumerable<IDsmrProcessor> _dsmrProcessors;
 
-    public DsmrProcessorService(Parser dsmrParser, ILogger<DsmrProcessorService> logger, IEnumerable<IDsmrProcessor> dsmrProcessors)
+    public DsmrProcessorService(ILogger<DsmrProcessorService> logger, IEnumerable<IDsmrProcessor> dsmrProcessors)
     {
-        _dsmrParser = dsmrParser;
+        _dsmrParser = new DSMRTelegramParser();
         _logger = logger;
         _dsmrProcessors = dsmrProcessors;
     }
@@ -21,16 +22,16 @@ internal class DsmrProcessorService : IDsmrProcessorService
     {
         try
         {
-            var telegrams = await _dsmrParser.Parse(message).WaitAsync(cancellationToken);
-
-            foreach (var telegram in telegrams)
+            if (!_dsmrParser.TryParse(message, out Telegram? telegram))
             {
-                _logger.LogTrace(telegram.ToString());
+                return;
+            }
 
-                foreach (var dsmrProcessor in _dsmrProcessors)
-                {
-                    await dsmrProcessor.ProcessTelegram(telegram, cancellationToken);
-                }
+            _logger.LogTrace(telegram?.ToString());
+
+            foreach (var dsmrProcessor in _dsmrProcessors)
+            {
+                await dsmrProcessor.ProcessTelegram(telegram, cancellationToken);
             }
         }
         catch (Exception e)

@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using DsmrParser.Models;
+using DSMRParser.Models;
 using MQTTnet;
 
 namespace DsmrHub.Dsmr.Extensions

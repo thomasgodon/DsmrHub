@@ -1,6 +1,6 @@
 ﻿using DsmrHub.Dsmr;
 using DsmrHub.Dsmr.Extensions;
-using DsmrParser.Models;
+using DSMRParser.Models;
 using Microsoft.Extensions.Options;
 using MQTTnet;
 using MQTTnet.Client;
