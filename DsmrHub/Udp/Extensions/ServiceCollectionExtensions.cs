@@ -8,7 +8,8 @@ namespace DsmrHub.Udp.Extensions
     {
         public static IServiceCollection AddUdpSender(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
-            serviceCollection.Configure<MqttOptions>(configuration.GetSection(nameof(UdpOptions)));
+            serviceCollection.Configure<UdpOptions>(configuration.GetSection(nameof(UdpOptions)));
+            serviceCollection.AddTransient<IDsmrProcessor, UdpProcessor>();
             return serviceCollection;
         }
     }

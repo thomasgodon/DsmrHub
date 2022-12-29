@@ -1,7 +1,8 @@
-﻿using DsmrParser.Models;
+﻿using System.Text;
+using DsmrParser.Models;
 using MQTTnet;
 
-namespace DsmrHub.Mqtt.Extensions
+namespace DsmrHub.Dsmr.Extensions
 {
     internal static class TelegramExtensions
     {
@@ -13,6 +14,14 @@ namespace DsmrHub.Mqtt.Extensions
                 .WithTopic($"dsmr/{property}")
                 .WithPayload(value?.ToString() ?? string.Empty)
                 .Build();
+
+            return message;
+        }
+
+        public static byte[] ToUdpPacket(this Telegram telegram, string property)
+        {
+            var value = telegram.GetType().GetProperty(property)?.GetValue(telegram, null);
+            var message = Encoding.UTF8.GetBytes(value?.ToString() ?? string.Empty);
 
             return message;
         }
