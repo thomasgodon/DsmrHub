@@ -1,6 +1,8 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using DSMRParser.Models;
 using MQTTnet;
+using Opc.Ua;
 
 namespace DsmrHub.Dsmr.Extensions
 {
@@ -21,9 +23,19 @@ namespace DsmrHub.Dsmr.Extensions
         public static byte[] ToUdpPacket(this Telegram telegram, string property)
         {
             var value = telegram.GetType().GetProperty(property)?.GetValue(telegram, null);
-            var message = Encoding.UTF8.GetBytes(value?.ToString() ?? string.Empty);
+            var subValue = value?.GetType().GetProperty("Value")?.GetValue(value, null);
+            var subSubValue = subValue?.GetType().GetProperty("Value")?.GetValue(subValue, null);
 
-            return message;
+            return Encoding.UTF8.GetBytes(subSubValue?.ToInvariantString() ?? subValue?.ToInvariantString() ?? value?.ToInvariantString() ?? string.Empty);
+        }
+
+        private static string? ToInvariantString(this object value)
+        {
+            if (value is decimal decimalValue)
+            {
+                return decimalValue.ToString(CultureInfo.InvariantCulture);
+            }
+            return value.ToString();
         }
     }
 }
