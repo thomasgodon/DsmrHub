@@ -34,6 +34,10 @@ internal class DsmrProcessorService : IDsmrProcessorService
                 await dsmrProcessor.ProcessTelegram(telegram, cancellationToken);
             }
         }
+        catch (InvalidOBISIdException e)
+        {
+            _logger.LogWarning($"{e.Message} - {message}");
+        }
         catch (Exception e)
         {
             _logger.LogError(e, e.Message);
