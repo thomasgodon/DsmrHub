@@ -27,6 +27,11 @@ internal class DsmrProcessorService : IDsmrProcessorService
                 return;
             }
 
+            if (telegram?.DSMRVersion == null)
+            {
+                return;
+            }
+
             _logger.LogTrace(telegram?.ToString());
 
             foreach (var dsmrProcessor in _dsmrProcessors)
