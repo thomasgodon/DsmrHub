@@ -9,7 +9,6 @@ using Microsoft.Azure.Devices.Provisioning.Client.Transport;
 using Microsoft.Azure.Devices.Shared;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace DsmrHub.IotCentral
 {
@@ -18,7 +17,7 @@ namespace DsmrHub.IotCentral
         private readonly ILogger<IotCentralProcessor> _logger;
         private readonly IotCentralOptions _iotCentralOptions;
         private readonly Stopwatch _registerInterval;
-        private string? _underlyingIotHub;
+        private DeviceClient _deviceClient = default!;
 
         public IotCentralProcessor(ILogger<IotCentralProcessor> logger, IOptions<IotCentralOptions> iotCentralOptions)
         {
@@ -31,13 +30,6 @@ namespace DsmrHub.IotCentral
         {
             if (!_iotCentralOptions.Enabled) return;
 
-            await RegisterDevice();
-
-            if (_underlyingIotHub == null)
-            {
-                return;
-            }
-
             try
             {
                 var message = new Message(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(telegram)))
@@ -45,41 +37,46 @@ namespace DsmrHub.IotCentral
                     ContentEncoding = Encoding.UTF8.WebName
                 };
 
-                var authMethod = new DeviceAuthenticationWithRegistrySymmetricKey(_iotCentralOptions.DeviceId, _iotCentralOptions.PrimaryKey);
-                await using var client = DeviceClient.Create(_underlyingIotHub, authMethod, TransportType.Amqp);
-                await client.SendEventAsync(message, cancellationToken);
+                if (_registerInterval.IsRunning is false)
+                {
+                    await CreateDeviceClientAsync(cancellationToken);
+                }
+                
+                await _deviceClient.SendEventAsync(message, cancellationToken);
             }
             catch (Exception e)
             {
-                _logger.LogError(e, $"could not send message to device {_iotCentralOptions.DeviceId}");
+                await CreateDeviceClientAsync(cancellationToken);
+                _logger.LogError(e, "Could not send message to device {deviceId}", _iotCentralOptions.DeviceId);
             }
         }
 
-        private async Task RegisterDevice()
+        private async Task CreateDeviceClientAsync(CancellationToken cancellationToken)
         {
             if (_registerInterval.IsRunning && _registerInterval.Elapsed < TimeSpan.FromHours(1))
             {
                 return;
             }
 
-            _underlyingIotHub = await GetUnderlyingIotHub();
+            var underlyingIotHub = await GetUnderlyingIotHub(cancellationToken);
 
-            if (_underlyingIotHub == null)
+            if (underlyingIotHub == null)
             {
                 return;
             }
-            
+
+            _deviceClient = CreateDeviceClient(underlyingIotHub);
             _registerInterval.Restart();
         }
 
-        private async Task<string?> GetUnderlyingIotHub()
+        private async Task<string?> GetUnderlyingIotHub(CancellationToken cancellationToken)
         {
             try
             {
                 using var symmetricKeyProvider = new SecurityProviderSymmetricKey(_iotCentralOptions.DeviceId, _iotCentralOptions.PrimaryKey, _iotCentralOptions.SecondaryKey);
                 var dps = ProvisioningDeviceClient.Create(_iotCentralOptions.ProvisioningUri, _iotCentralOptions.IdScope, symmetricKeyProvider, new ProvisioningTransportHandlerAmqp());
-                var registerResult = await dps.RegisterAsync(TimeSpan.FromMinutes(1));
-                _logger.LogInformation($"New registration succeeded for device {_iotCentralOptions.DeviceId}");
+                var registerResult = await dps.RegisterAsync(cancellationToken);
+                _logger.LogInformation("New registration succeeded for device {deviceId}", _iotCentralOptions.DeviceId);
                 return registerResult.AssignedHub;
             }
             catch (Exception e)
@@ -87,6 +84,13 @@ namespace DsmrHub.IotCentral
                 _logger.LogError(e, "Could not get underlying iot hub");
                 return null;
             }
+        }
+
+        private DeviceClient CreateDeviceClient(string assignedIotHub)
+        {
+            var authMethod = new DeviceAuthenticationWithRegistrySymmetricKey(_iotCentralOptions.DeviceId, _iotCentralOptions.PrimaryKey);
+            using var client = DeviceClient.Create(assignedIotHub, authMethod, TransportType.Amqp);
+            return client;
         }
     }
 }
