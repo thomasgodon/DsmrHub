@@ -46,8 +46,8 @@ namespace DsmrHub.IotCentral
             }
             catch (Exception e)
             {
-                await CreateDeviceClientAsync(cancellationToken);
                 _logger.LogError(e, "Could not send message to device {deviceId}", _iotCentralOptions.DeviceId);
+                await CreateDeviceClientAsync(cancellationToken);
             }
         }
 
@@ -89,7 +89,7 @@ namespace DsmrHub.IotCentral
         private DeviceClient CreateDeviceClient(string assignedIotHub)
         {
             var authMethod = new DeviceAuthenticationWithRegistrySymmetricKey(_iotCentralOptions.DeviceId, _iotCentralOptions.PrimaryKey);
-            using var client = DeviceClient.Create(assignedIotHub, authMethod, TransportType.Amqp);
+            var client = DeviceClient.Create(assignedIotHub, authMethod, TransportType.Amqp);
             return client;
         }
     }
