@@ -1,14 +1,25 @@
-﻿using System.Net.Sockets;
+﻿using System.Globalization;
+using System.Net.Sockets;
 
 namespace DsmrHub.Udp.Extensions
 {
     internal static class UdpExtensions
     {
-        public static async Task SendToAsync(this byte[] data, string host, int port, CancellationToken cancellationToken)
+        public static string GetSubValue(this object inputValue, string property)
         {
-            using var udpSender = new UdpClient();
-            udpSender.Connect(host, port);
-            await udpSender.SendAsync(data, cancellationToken);
+            var value = inputValue.GetType().GetProperty(property)?.GetValue(inputValue, null);
+            var subValue = value?.GetType().GetProperty("Value")?.GetValue(value, null);
+            var subSubValue = subValue?.GetType().GetProperty("Value")?.GetValue(subValue, null);
+
+            return subSubValue?.ToInvariantString() ?? subValue?.ToInvariantString() ?? value?.ToInvariantString() ?? string.Empty;
+        }
+        private static string? ToInvariantString(this object value)
+        {
+            if (value is decimal decimalValue)
+            {
+                return decimalValue.ToString(CultureInfo.InvariantCulture);
+            }
+            return value.ToString();
         }
     }
 }

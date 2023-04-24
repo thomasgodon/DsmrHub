@@ -2,7 +2,11 @@
 using DsmrHub.Dsmr.Extensions;
 using DsmrHub.Udp.Extensions;
 using DSMRParser.Models;
+using Microsoft.Azure.Amqp.Framing;
 using Microsoft.Extensions.Options;
+using System.Globalization;
+using System.Net.Sockets;
+using System.Text;
 
 namespace DsmrHub.Udp
 {
@@ -21,27 +25,44 @@ namespace DsmrHub.Udp
         {
             if (!_udpOptions.Enabled) return;
 
-            await telegram.ToUdpPacket(nameof(telegram.Identification)).SendToAsync(_udpOptions.Host, 10000, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.DSMRVersion)).SendToAsync(_udpOptions.Host, 10001, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.EquipmentId)).SendToAsync(_udpOptions.Host, 10002, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.TimeStamp)).SendToAsync(_udpOptions.Host, 10003, cancellationToken);
-
-            await telegram.ToUdpPacket(nameof(telegram.EnergyDeliveredTariff1)).SendToAsync(_udpOptions.Host, 10010, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.EnergyDeliveredTariff2)).SendToAsync(_udpOptions.Host, 10011, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.EnergyReturnedTariff1)).SendToAsync(_udpOptions.Host, 10012, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.EnergyReturnedTariff2)).SendToAsync(_udpOptions.Host, 10013, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.ElectricityTariff)).SendToAsync(_udpOptions.Host, 10014, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.PowerDelivered)).SendToAsync(_udpOptions.Host, 10015, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.PowerReturned)).SendToAsync(_udpOptions.Host, 10016, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.PowerDeliveredL1)).SendToAsync(_udpOptions.Host, 10017, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.PowerReturnedL1)).SendToAsync(_udpOptions.Host, 10018, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.VoltageL1)).SendToAsync(_udpOptions.Host, 10019, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.CurrentL1)).SendToAsync(_udpOptions.Host, 10020, cancellationToken);
-
-            await telegram.ToUdpPacket(nameof(telegram.GasDeviceType)).SendToAsync(_udpOptions.Host, 10030, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.GasEquipmentId)).SendToAsync(_udpOptions.Host, 10031, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.GasValvePosition)).SendToAsync(_udpOptions.Host, 10032, cancellationToken);
-            await telegram.ToUdpPacket(nameof(telegram.GasDelivered)).SendToAsync(_udpOptions.Host, 10033, cancellationToken);
+            foreach (var (udpData, port) in GenerateUdpMessages(telegram, _udpOptions.PortMapping).ToList())
+            {
+                using var udpSender = new UdpClient();
+                udpSender.Connect(_udpOptions.Host, port);
+                await udpSender.SendAsync(udpData, cancellationToken);
+            }
         }
-    }
+
+        private static IEnumerable<(byte[] Data, int Port)> GenerateUdpMessages(Telegram telegram, IReadOnlyDictionary<string, int> portMapping)
+        {
+            foreach (var propertyInfo in telegram.GetType().GetProperties())
+            {
+                dynamic propertyValue;
+                try
+                {
+                    propertyValue = Convert.ChangeType(propertyInfo.GetValue(telegram, null)?.GetSubValue(propertyInfo.Name), propertyInfo.PropertyType)!;
+                }
+                catch (Exception)
+                {
+                    yield break;
+                }
+
+                if (propertyValue == null)
+                {
+                    continue;
+                }
+
+                if (propertyValue is Enum)
+                {
+                    propertyValue = (int)propertyValue;
+                }
+
+                if (portMapping.TryGetValue(propertyInfo.Name, out var port) is false)
+                {
+                    continue;
+                }
+
+                yield return new ValueTuple<byte[], int>(Encoding.UTF8.GetBytes(propertyValue.ToString()), port);
+            }
+        }    }
 }
