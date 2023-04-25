@@ -18,7 +18,7 @@ namespace DsmrHub.Udp
             _udpOptions = udpOptions.Value;
         }
 
-        async Task IDsmrProcessor.ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
+        public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
         {
             if (!_udpOptions.Enabled) return;
 
