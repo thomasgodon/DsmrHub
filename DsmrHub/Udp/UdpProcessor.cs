@@ -1,10 +1,7 @@
 ﻿using DsmrHub.Dsmr;
-using DsmrHub.Dsmr.Extensions;
 using DsmrHub.Udp.Extensions;
 using DSMRParser.Models;
-using Microsoft.Azure.Amqp.Framing;
 using Microsoft.Extensions.Options;
-using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
 
@@ -30,6 +27,7 @@ namespace DsmrHub.Udp
                 using var udpSender = new UdpClient();
                 udpSender.Connect(_udpOptions.Host, port);
                 await udpSender.SendAsync(udpData, cancellationToken);
+                _logger.LogTrace("Sent '{message}' to '{host}' at port '{port}'", Encoding.UTF8.GetString(udpData), _udpOptions.Host, port);
             }
         }
 
