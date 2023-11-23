@@ -1,5 +1,4 @@
-﻿using System.Text;
-using DSMRParser;
+﻿using DSMRParser;
 using DSMRParser.Models;
 
 namespace DsmrHub.Dsmr;
@@ -7,7 +6,6 @@ namespace DsmrHub.Dsmr;
 internal class DsmrProcessorService : IDsmrProcessorService
 {
     private readonly ILogger<DsmrProcessorService> _logger;
-    private readonly StringBuilder _buffer = new();
     private readonly DSMRTelegramParser _dsmrParser;
     private readonly IEnumerable<IDsmrProcessor> _dsmrProcessors;
 
