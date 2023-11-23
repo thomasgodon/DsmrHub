@@ -1,6 +1,4 @@
 ﻿using DsmrHub.Dsmr;
-using DsmrHub.Mqtt;
-using System.Configuration;
 using DsmrHub.IotCentral;
 
 namespace DsmrHub.Udp.Extensions

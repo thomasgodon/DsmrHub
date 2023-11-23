@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using DsmrHub.Dsmr;
-using DsmrHub.Udp;
 using DSMRParser.Models;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Provisioning.Client;

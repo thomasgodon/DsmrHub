@@ -20,17 +20,17 @@ internal class DsmrProcessorService : IDsmrProcessorService
     {
         try
         {
-            if (!_dsmrParser.TryParse(message, out Telegram? telegram))
+            if (_dsmrParser.TryParse(message, out var telegram) is false)
             {
                 return;
             }
 
-            if (telegram?.DSMRVersion == null)
+            if (telegram.DSMRVersion == null)
             {
                 return;
             }
 
-            _logger.LogTrace(telegram?.ToString());
+            _logger.LogTrace(telegram.ToString());
 
             foreach (var dsmrProcessor in _dsmrProcessors)
             {
@@ -39,11 +39,11 @@ internal class DsmrProcessorService : IDsmrProcessorService
         }
         catch (InvalidOBISIdException e)
         {
-            _logger.LogWarning($"{e.Message} - {message}");
+            _logger.LogWarning("{errorMessage} - {message}", e.Message, message);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, e.Message);
+            _logger.LogError(e, "{error}", e.Message);
         }
     }
 }

@@ -34,8 +34,8 @@ namespace DsmrHub.Dsmr
             {
                 try
                 {
-                    _logger.LogInformation($"connection to {_dsmrClientOptions.ComPort} initializing");
-                    _serialPort.DataReceived += (sender, args) =>
+                    _logger.LogInformation("connection to {port} initializing",  _dsmrClientOptions.ComPort);
+                    _serialPort.DataReceived += (_, _) =>
                     {
                         lock (_queueLock)
                         {
