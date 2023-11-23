@@ -9,13 +9,12 @@
 
   <ItemGroup>
     <PackageReference Include="DSMRParser.Net" Version="1.0.4" />
-    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.41.3" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.2" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.4" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
-    <PackageReference Include="MQTTnet" Version="4.1.4.563" />
-    <PackageReference Include="Opc.UaFx.Advanced" Version="2.30.0" />
-    <PackageReference Include="System.IO.Ports" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.42.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.19.3" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Amqp" Version="1.16.5" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="MQTTnet" Version="4.3.1.873" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

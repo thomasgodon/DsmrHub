@@ -2,7 +2,6 @@
 using System.Text;
 using DSMRParser.Models;
 using MQTTnet;
-using Opc.Ua;
 
 namespace DsmrHub.Dsmr.Extensions
 {
