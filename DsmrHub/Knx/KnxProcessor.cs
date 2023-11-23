@@ -1,20 +1,31 @@
 ﻿using DsmrHub.Dsmr;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DSMRParser.Models;
+using Knx;
+using Knx.KnxNetIp;
+using Microsoft.Extensions.Options;
+using System.Net;
 
 namespace DsmrHub.Knx
 {
     internal class KnxProcessor : IDsmrProcessor
     {
-        public Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
+        private readonly KnxOptions _knxOptions;
+        private readonly KnxNetIpTunnelingClient _client;
+        private readonly ILogger<KnxProcessor> _logger;
+
+        public KnxProcessor(ILogger<KnxProcessor> logger, IOptions<KnxOptions> knxOptions)
+        {
+            _logger = logger;
+            _knxOptions = knxOptions.Value;
+            var knxClientEndpoint = new IPEndPoint(IPAddress.Parse(_knxOptions.Host), _knxOptions.Port);
+            var knxDeviceAddress = KnxAddress.ParseDevice(_knxOptions.KnxDeviceAddress);
+            _client = new KnxNetIpTunnelingClient(knxClientEndpoint, knxDeviceAddress);
+        }
+
+        public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
         {
             if (_knxOptions.Enabled is false) return;
 
-            // connect to the KNXnet/IP gateway
             if (_client.IsConnected is false)
             {
                 try
