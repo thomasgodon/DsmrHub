@@ -41,75 +41,63 @@ namespace DsmrHub.Knx
                 }
             }
 
-            lock (_telegramsLock)
-            {
-                // GAS
-                UpdateValue(nameof(telegram.PowerDelivered), BitConverter.GetBytes((float)telegram.PowerDelivered?.Value!));
-            }
+            // get updated values
+            var updatedValues = UpdateValues(telegram)
+                .Where(m => m is not null)
+                .ToList();
 
-            await SendValuesAsync(cancellationToken);
+            // send updated values
+            foreach (var updatedValue in updatedValues)
+            {
+                await SendValueAsync(updatedValue!, cancellationToken);
+            }
         }
 
-        private async Task SendValuesAsync(CancellationToken cancellationToken)
+        private IEnumerable<KnxTelegramValue?> UpdateValues(Telegram telegram)
         {
-            List<KnxTelegramValue> values;
             lock (_telegramsLock)
             {
-                values = _telegrams.Values.ToList();
-            }
-
-            foreach (var knxTelegramValue in values)
-            {
-                var address = knxTelegramValue.Address;
-                var value = knxTelegramValue.Value;
-
-                _logger.LogWarning("logged: {value}", value);
-
-                if (value is null)
-                {
-                    continue;
-                }
-
-                await _knxClient.WriteGroupValueAsync(
-                    address,
-                    new GroupValue(value),
-                    MessagePriority.Low,
-                    cancellationToken: cancellationToken);
+                yield return telegram.GasDelivered?.Value?.Value is not null
+                    ? UpdateValue(nameof(Telegram.GasDelivered), BitConverter.GetBytes((float)telegram.GasDelivered.Value.Value))
+                    : null;
             }
         }
 
-        private void UpdateValue(string capability, byte[] value)
+        private KnxTelegramValue? UpdateValue(string capability, byte[] value)
         {
             if (_telegrams.TryGetValue(capability, out var knxTelegram) is false)
             {
-                return;
+                return null;
             }
 
-            if (knxTelegram.Value == value)
+            if (knxTelegram.Value is not null)
             {
-                return;
+                if (knxTelegram.Value.SequenceEqual(value))
+                {
+                    return null;
+                }
             }
 
             _telegrams[capability].Value = value;
+            return _telegrams[capability];
+        }
+
+        private async Task SendValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
+        {
+            var groupValue = new GroupValue(value.Value);
+            await _knxClient.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
         }
 
         private static Dictionary<string, KnxTelegramValue> BuildTelegrams(KnxOptions options)
         {
             var telegrams = new Dictionary<string, KnxTelegramValue> (options.GroupAddressMapping.Count);
 
-            foreach (var groupAddressMapping in options.GroupAddressMapping)
+            var groupAddressMappings = options.GroupAddressMapping
+                .Where(groupAddressMapping => string.IsNullOrEmpty(groupAddressMapping.Value) is false);
+
+            foreach (var groupAddressMapping in groupAddressMappings)
             {
-                if (string.IsNullOrEmpty(groupAddressMapping.Value.Address))
-                {
-                    continue;
-                }
-
-                if (string.IsNullOrEmpty(groupAddressMapping.Value.DataPointType))
-                {
-                    continue;
-                }
-
-                telegrams.Add(groupAddressMapping.Key, new KnxTelegramValue(groupAddressMapping.Value.Address, groupAddressMapping.Value.DataPointType));
+                telegrams.Add(groupAddressMapping.Key, new KnxTelegramValue(groupAddressMapping.Value));
             }
 
             return telegrams;
