@@ -11,5 +11,11 @@ namespace DsmrHub.Knx
 
         public GroupAddress Address { get; }
         public byte[]? Value { get; internal set; }
+
+        public override string ToString()
+        {
+            var value = Value is not null ? string.Join(",", Value.ToList()) : string.Empty;
+            return $"{Address} - {value}";
+        }
     }
 }
