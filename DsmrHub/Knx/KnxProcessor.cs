@@ -11,7 +11,7 @@ namespace DsmrHub.Knx
     {
         private readonly ILogger<KnxProcessor> _logger;
         private readonly KnxOptions _knxOptions;
-        private readonly KnxBus _knxClient;
+        private KnxBus? _knxClient;
         private readonly Dictionary<string, KnxTelegramValue> _telegrams;
         private readonly object _telegramsLock = new();
 
@@ -20,7 +20,6 @@ namespace DsmrHub.Knx
             _logger = logger;
             _knxOptions = knxOptions.Value;
             _telegrams = BuildTelegrams(_knxOptions);
-            _knxClient = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
         }
 
         public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
@@ -28,15 +27,20 @@ namespace DsmrHub.Knx
             if (_knxOptions.Enabled is false) return;
 
             // connect to the KNXnet/IP gateway
-            if (_knxClient.ConnectionState != BusConnectionState.Connected)
+            if (_knxClient?.ConnectionState != BusConnectionState.Connected)
             {
                 try
                 {
+                    _knxClient = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
                     await _knxClient.ConnectAsync(cancellationToken);
                 }
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Couldn't connect to '{address}'", _knxOptions.Host);
+                    if (_knxClient is null)
+                    {
+                        return;
+                    }
                     await _knxClient.DisposeAsync();
                 }
             }
@@ -57,64 +61,64 @@ namespace DsmrHub.Knx
         {
             lock (_telegramsLock)
             {
-                // Electricity general
+                // Electricity tariff - 1.024
                 yield return telegram.ElectricityTariff is not null
                     ? UpdateValue(nameof(Telegram.ElectricityTariff), BitConverter.GetBytes(telegram.ElectricityTariff.Value == 1))
                     : null;
 
-                // Energy delivered
+                // Energy delivered - 14.*
                 yield return telegram.EnergyDeliveredTariff1?.Value is not null
-                    ? UpdateValue(nameof(Telegram.EnergyDeliveredTariff1), BitConverter.GetBytes((float)telegram.EnergyDeliveredTariff1.Value))
+                    ? UpdateValue(nameof(Telegram.EnergyDeliveredTariff1), BitConverter.GetBytes((float)(telegram.EnergyDeliveredTariff1.Value)))
                     : null;
 
                 yield return telegram.EnergyDeliveredTariff2?.Value is not null
-                    ? UpdateValue(nameof(Telegram.EnergyDeliveredTariff2), BitConverter.GetBytes((float)telegram.EnergyDeliveredTariff2.Value))
+                    ? UpdateValue(nameof(Telegram.EnergyDeliveredTariff2), BitConverter.GetBytes((float)(telegram.EnergyDeliveredTariff2.Value)))
                     : null;
 
-                // Energy returned
+                // Energy returned - 14.*
                 yield return telegram.EnergyReturnedTariff1?.Value is not null
-                    ? UpdateValue(nameof(Telegram.EnergyReturnedTariff1), BitConverter.GetBytes((float)telegram.EnergyReturnedTariff1.Value))
+                    ? UpdateValue(nameof(Telegram.EnergyReturnedTariff1), BitConverter.GetBytes((float)(telegram.EnergyReturnedTariff1.Value)))
                     : null;
 
                 yield return telegram.EnergyReturnedTariff2?.Value is not null
-                    ? UpdateValue(nameof(Telegram.EnergyReturnedTariff2), BitConverter.GetBytes((float)telegram.EnergyReturnedTariff2.Value))
+                    ? UpdateValue(nameof(Telegram.EnergyReturnedTariff2), BitConverter.GetBytes((float)(telegram.EnergyReturnedTariff2.Value)))
                     : null;
 
-                // Power delivered
+                // Power delivered - 14.056
                 yield return telegram.PowerDelivered?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerDelivered), BitConverter.GetBytes((float)telegram.PowerDelivered.Value))
+                    ? UpdateValue(nameof(Telegram.PowerDelivered), BitConverter.GetBytes((float)(telegram.PowerDelivered.Value * 1000)))
                     : null;
 
                 yield return telegram.PowerDeliveredL1?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerDeliveredL1), BitConverter.GetBytes((float)telegram.PowerDeliveredL1.Value))
+                    ? UpdateValue(nameof(Telegram.PowerDeliveredL1), BitConverter.GetBytes((float)(telegram.PowerDeliveredL1.Value * 1000)))
                     : null;
 
                 yield return telegram.PowerDeliveredL2?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerDeliveredL2), BitConverter.GetBytes((float)telegram.PowerDeliveredL2.Value))
+                    ? UpdateValue(nameof(Telegram.PowerDeliveredL2), BitConverter.GetBytes((float)(telegram.PowerDeliveredL2.Value * 1000)))
                     : null;
 
                 yield return telegram.PowerDeliveredL3?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerDeliveredL3), BitConverter.GetBytes((float)telegram.PowerDeliveredL3.Value))
+                    ? UpdateValue(nameof(Telegram.PowerDeliveredL3), BitConverter.GetBytes((float)(telegram.PowerDeliveredL3.Value * 1000)))
                     : null;
 
-                // Power returned
+                // Power returned - 14.056
                 yield return telegram.PowerReturned?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerReturned), BitConverter.GetBytes((float)telegram.PowerReturned.Value))
+                    ? UpdateValue(nameof(Telegram.PowerReturned), BitConverter.GetBytes((float)(telegram.PowerReturned.Value * 1000)))
                     : null;
 
                 yield return telegram.PowerReturnedL1?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerReturnedL1), BitConverter.GetBytes((float)telegram.PowerReturnedL1.Value))
+                    ? UpdateValue(nameof(Telegram.PowerReturnedL1), BitConverter.GetBytes((float)(telegram.PowerReturnedL1.Value * 1000)))
                     : null;
 
                 yield return telegram.PowerReturnedL2?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerReturnedL2), BitConverter.GetBytes((float)telegram.PowerReturnedL2.Value))
+                    ? UpdateValue(nameof(Telegram.PowerReturnedL2), BitConverter.GetBytes((float)(telegram.PowerReturnedL2.Value * 1000)))
                     : null;
 
                 yield return telegram.PowerReturnedL3?.Value is not null
-                    ? UpdateValue(nameof(Telegram.PowerReturnedL3), BitConverter.GetBytes((float)telegram.PowerReturnedL3.Value))
+                    ? UpdateValue(nameof(Telegram.PowerReturnedL3), BitConverter.GetBytes((float)(telegram.PowerReturnedL3.Value * 1000)))
                     : null;
 
-                // Current amperage
+                // Current amperage - 14.019
                 yield return telegram.CurrentL1?.Value is not null
                     ? UpdateValue(nameof(Telegram.CurrentL1), BitConverter.GetBytes((float)telegram.CurrentL1.Value))
                     : null;
@@ -127,7 +131,7 @@ namespace DsmrHub.Knx
                     ? UpdateValue(nameof(Telegram.CurrentL3), BitConverter.GetBytes((float)telegram.CurrentL3.Value))
                     : null;
 
-                // Current voltage
+                // Current voltage - 14.027
                 yield return telegram.VoltageL1?.Value is not null
                     ? UpdateValue(nameof(Telegram.VoltageL1), BitConverter.GetBytes((float)telegram.VoltageL1.Value))
                     : null;
@@ -140,11 +144,12 @@ namespace DsmrHub.Knx
                     ? UpdateValue(nameof(Telegram.VoltageL3), BitConverter.GetBytes((float)telegram.VoltageL3.Value))
                     : null;
 
-                // Gas
+                // Gas - 14.076
                 yield return telegram.GasDelivered?.Value?.Value is not null
                     ? UpdateValue(nameof(Telegram.GasDelivered), BitConverter.GetBytes((float)telegram.GasDelivered.Value.Value))
                     : null;
 
+                // Gas Valve position - 1.001
                 yield return telegram.GasValvePosition is not null
                     ? UpdateValue(nameof(Telegram.GasValvePosition), BitConverter.GetBytes(telegram.GasValvePosition.Value == 1))
                     : null;
@@ -172,7 +177,7 @@ namespace DsmrHub.Knx
 
         private async Task SendValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
         {
-            if (value.Value is null)
+            if (value.Value is null || _knxClient is null)
             {
                 return;
             }
