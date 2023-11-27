@@ -84,7 +84,12 @@ namespace DsmrHub.Knx
 
         private async Task SendValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
         {
-            var groupValue = new GroupValue(value.Value);
+            if (value.Value is null)
+            {
+                return;
+            }
+
+            var groupValue = new GroupValue(value.Value.Reverse().ToArray());
             await _knxClient.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
         }
 
