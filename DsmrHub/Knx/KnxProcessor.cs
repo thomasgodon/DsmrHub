@@ -13,6 +13,7 @@ namespace DsmrHub.Knx
         private readonly KnxOptions _knxOptions;
         private KnxBus? _knxClient;
         private readonly Dictionary<string, KnxTelegramValue> _telegrams;
+        private readonly Dictionary<GroupAddress, string> _capabilityAddressMapping;
         private readonly object _telegramsLock = new();
 
         public KnxProcessor(ILogger<KnxProcessor> logger, IOptions<KnxOptions> knxOptions)
@@ -20,6 +21,7 @@ namespace DsmrHub.Knx
             _logger = logger;
             _knxOptions = knxOptions.Value;
             _telegrams = BuildTelegrams(_knxOptions);
+            _capabilityAddressMapping = BuildCapabilityAddressMapping(_knxOptions);
         }
 
         public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
@@ -32,6 +34,10 @@ namespace DsmrHub.Knx
                 try
                 {
                     _knxClient = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
+                    _knxClient.GroupMessageReceived += async (_, args) =>
+                    {
+                        await ProcessGroupMessageReceivedAsync(args, cancellationToken);
+                    };
                     await _knxClient.ConnectAsync(cancellationToken);
                 }
                 catch (Exception e)
@@ -55,6 +61,30 @@ namespace DsmrHub.Knx
             {
                 await SendValueAsync(updatedValue!, cancellationToken);
             }
+        }
+
+        private async Task ProcessGroupMessageReceivedAsync(GroupEventArgs e, CancellationToken cancellationToken)
+        {
+            if (e.EventType != GroupEventType.ValueRead)
+            {
+                return;
+            }
+
+            if (_capabilityAddressMapping.TryGetValue(e.DestinationAddress, out var capability) is false)
+            {
+                return;
+            }
+
+            KnxTelegramValue? knxTelegramValue;
+            lock (_telegrams)
+            {
+                if (_telegrams.TryGetValue(capability, out knxTelegramValue) is false)
+                {
+                    return;
+                }
+            }
+
+            await SendValueAsync(knxTelegramValue, cancellationToken);
         }
 
         private IEnumerable<KnxTelegramValue?> UpdateValues(Telegram telegram)
@@ -186,19 +216,27 @@ namespace DsmrHub.Knx
             await _knxClient.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
         }
 
-        private static Dictionary<string, KnxTelegramValue> BuildTelegrams(KnxOptions options)
+        private static Dictionary<string, KnxTelegramValue> BuildTelegrams(KnxOptions knxOptions)
         {
-            var telegrams = new Dictionary<string, KnxTelegramValue> (options.GroupAddressMapping.Count);
+            var telegrams = new Dictionary<string, KnxTelegramValue> (knxOptions.GroupAddressMapping.Count);
 
-            var groupAddressMappings = options.GroupAddressMapping
-                .Where(groupAddressMapping => string.IsNullOrEmpty(groupAddressMapping.Value) is false);
-
-            foreach (var groupAddressMapping in groupAddressMappings)
+            foreach (var groupAddressMapping in GroupAddressMappingsFromOptions(knxOptions))
             {
                 telegrams.Add(groupAddressMapping.Key, new KnxTelegramValue(groupAddressMapping.Value));
             }
 
             return telegrams;
         }
+
+        private static Dictionary<GroupAddress, string> BuildCapabilityAddressMapping(KnxOptions knxOptions)
+            => GroupAddressMappingsFromOptions(knxOptions)
+                .ToDictionary(
+                    groupAddressMapping => GroupAddress.Parse(groupAddressMapping.Value), 
+                    groupAddressMapping => groupAddressMapping.Key);
+
+        private static IEnumerable<KeyValuePair<string, string>> GroupAddressMappingsFromOptions(KnxOptions options)
+            => options.GroupAddressMapping
+                .Where(
+                    mapping => string.IsNullOrEmpty(mapping.Value) is false);
     }
 }
