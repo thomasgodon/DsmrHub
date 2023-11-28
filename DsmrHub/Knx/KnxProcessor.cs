@@ -11,7 +11,7 @@ namespace DsmrHub.Knx
     {
         private readonly ILogger<KnxProcessor> _logger;
         private readonly KnxOptions _knxOptions;
-        private KnxBus? _knxClient;
+        private readonly KnxBus _knxClient;
         private readonly Dictionary<string, KnxTelegramValue> _telegrams;
         private readonly Dictionary<GroupAddress, string> _capabilityAddressMapping;
         private readonly object _telegramsLock = new();
@@ -22,6 +22,7 @@ namespace DsmrHub.Knx
             _knxOptions = knxOptions.Value;
             _telegrams = BuildTelegrams(_knxOptions);
             _capabilityAddressMapping = BuildCapabilityAddressMapping(_knxOptions);
+            _knxClient = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
         }
 
         public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
@@ -29,11 +30,10 @@ namespace DsmrHub.Knx
             if (_knxOptions.Enabled is false) return;
 
             // connect to the KNXnet/IP gateway
-            if (_knxClient?.ConnectionState != BusConnectionState.Connected)
+            if (_knxClient.ConnectionState != BusConnectionState.Connected)
             {
                 try
                 {
-                    _knxClient = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
                     _knxClient.GroupMessageReceived += async (_, args) =>
                     {
                         await ProcessGroupMessageReceivedAsync(args, cancellationToken);
@@ -43,11 +43,6 @@ namespace DsmrHub.Knx
                 catch (Exception e)
                 {
                     _logger.LogError(e, "Couldn't connect to '{address}'", _knxOptions.Host);
-                    if (_knxClient is null)
-                    {
-                        return;
-                    }
-                    await _knxClient.DisposeAsync();
                 }
             }
 
@@ -207,7 +202,7 @@ namespace DsmrHub.Knx
 
         private async Task SendValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
         {
-            if (value.Value is null || _knxClient is null)
+            if (value.Value is null)
             {
                 return;
             }
