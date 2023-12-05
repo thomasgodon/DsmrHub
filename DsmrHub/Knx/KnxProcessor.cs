@@ -250,6 +250,8 @@ namespace DsmrHub.Knx
 
             var groupValue = new GroupValue(value.Value.Reverse().ToArray());
             var writeCancellationToken = new CancellationTokenSource();
+
+            // TODO: retry
             await WhenAny(
                 _knxBus.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, writeCancellationToken.Token),
                 Delay(TimeSpan.FromMilliseconds(100), cancellationToken));
