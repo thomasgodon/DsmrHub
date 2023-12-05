@@ -12,7 +12,7 @@ namespace DsmrHub.Knx.Extensions
         public static IServiceCollection AddKnx(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             serviceCollection.Configure<KnxOptions>(configuration.GetSection(nameof(KnxOptions)));
-            serviceCollection.AddTransient<IDsmrProcessor, KnxProcessor>();
+            serviceCollection.AddSingleton<IDsmrProcessor, KnxProcessor>();
             return serviceCollection;
         }
     }

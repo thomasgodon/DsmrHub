@@ -1,4 +1,5 @@
-﻿using DsmrHub.Dsmr;
+﻿using System.Diagnostics;
+using DsmrHub.Dsmr;
 using DSMRParser.Models;
 using Knx.Falcon;
 using Knx.Falcon.Configuration;
@@ -59,10 +60,14 @@ namespace DsmrHub.Knx
                 .ToList();
 
             // send updated values
+            _logger.LogInformation("Writing batch ({batchCount})...", updatedValues.Count);
+            var sendTimer = new Stopwatch();
+            sendTimer.Start();
             foreach (var updatedValue in updatedValues)
             {
                 await WriteGroupValueAsync(updatedValue!, cancellationToken);
             }
+            _logger.LogInformation("Writing finished in {sendTime}ms", sendTimer.ElapsedMilliseconds);
         }
 
         private async Task ProcessGroupMessageReceivedAsync(GroupEventArgs e, CancellationToken cancellationToken)
