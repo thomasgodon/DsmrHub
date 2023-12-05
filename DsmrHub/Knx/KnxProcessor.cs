@@ -37,7 +37,10 @@ namespace DsmrHub.Knx
             {
                 await ProcessGroupMessageReceivedAsync(args, cancellationToken);
             };
+
+            _logger.LogInformation("Connecting to {host}", _knxOptions.Host);
             await _knxBus.ConnectAsync(cancellationToken);
+            _logger.LogInformation("Connected to {host}", _knxOptions.Host);
         }
 
         public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
@@ -60,16 +63,6 @@ namespace DsmrHub.Knx
             {
                 await SendValueAsync(updatedValue!, cancellationToken);
             }
-        }
-
-        private Task RunProcessTimerAsync(CancellationToken cancellationToken)
-        {
-            while (cancellationToken.IsCancellationRequested is false)
-            {
-
-            }
-
-            return Task.CompletedTask;
         }
 
         private async Task ProcessGroupMessageReceivedAsync(GroupEventArgs e, CancellationToken cancellationToken)
