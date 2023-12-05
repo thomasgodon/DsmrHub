@@ -30,11 +30,11 @@ namespace DsmrHub.Dsmr
 
         public async Task Start(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (cancellationToken.IsCancellationRequested is false)
             {
                 try
                 {
-                    _logger.LogInformation("connection to {port} initializing",  _dsmrClientOptions.ComPort);
+                    _logger.LogInformation("Connection to {port} initializing",  _dsmrClientOptions.ComPort);
                     _serialPort.DataReceived += (_, _) =>
                     {
                         lock (_queueLock)
@@ -47,12 +47,12 @@ namespace DsmrHub.Dsmr
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, e.Message);
+                    _logger.LogError(e, "{message}", e.Message);
                 }
 
-                if (cancellationToken.IsCancellationRequested) continue;
+                if (cancellationToken.IsCancellationRequested) break;
 
-                _logger.LogInformation("Retry in 5 seconds.");
+                _logger.LogInformation("Reconnect in 5 seconds.");
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
         }
@@ -60,7 +60,7 @@ namespace DsmrHub.Dsmr
         private async Task ProcessReceivedData(CancellationToken cancellationToken)
         {
             var buffer = new StringBuilder();
-            while (!cancellationToken.IsCancellationRequested)
+            while (cancellationToken.IsCancellationRequested is false && _serialPort.IsOpen)
             {
                 await Task.Delay(100, cancellationToken);
 
