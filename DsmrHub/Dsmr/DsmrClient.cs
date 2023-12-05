@@ -89,15 +89,8 @@ namespace DsmrHub.Dsmr
                 }
 
                 _receiveTimeoutTimer.Restart();
-                _logger.LogTrace(buffer.ToString());
-                try
-                {
-                    await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "{message}", e.Message);
-                }
+                _logger.LogTrace("{buffer}", buffer.ToString());
+                await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
                 buffer.Clear();
             }
 
