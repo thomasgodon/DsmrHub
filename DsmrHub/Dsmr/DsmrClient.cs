@@ -14,6 +14,8 @@ namespace DsmrHub.Dsmr
         private readonly Queue<string> _queue;
         private readonly object _queueLock = new();
         private readonly Stopwatch _receiveTimeoutTimer = new();
+        private readonly Stopwatch _lastReceivedTimeTimer = new();
+        private DateTime? _lastReceivedTime;
 
         public DsmrClient(ILogger<DsmrClient> logger, SerialPort serialPort, IDsmrProcessorService dsmrProcessorService, IOptions<DsmrOptions> dsmrClientOptions)
         {
@@ -28,6 +30,8 @@ namespace DsmrHub.Dsmr
             _serialPort.StopBits = (StopBits)_dsmrClientOptions.StopBits;
             _serialPort.DataBits = _dsmrClientOptions.DataBits;
             _serialPort.Parity = (Parity)_dsmrClientOptions.Parity;
+
+            _lastReceivedTimeTimer.Start();
         }
 
         public async Task Start(CancellationToken cancellationToken)
@@ -67,6 +71,13 @@ namespace DsmrHub.Dsmr
             {
                 await Task.Delay(100, cancellationToken);
 
+                // print last received every minute
+                if (_lastReceivedTimeTimer.Elapsed > TimeSpan.FromMinutes(1) && _lastReceivedTime is not null)
+                {
+                    _logger.LogInformation("Last telegram received at: {time}", _lastReceivedTime);
+                    _lastReceivedTimeTimer.Restart();
+                }
+
                 // stop loop, disconnect to trigger reconnect
                 if (_receiveTimeoutTimer.Elapsed > _dsmrClientOptions.ReceiveTimeout)
                 {
@@ -88,6 +99,7 @@ namespace DsmrHub.Dsmr
                     }
                 }
 
+                _lastReceivedTime = DateTime.Now;
                 _receiveTimeoutTimer.Restart();
                 _logger.LogTrace("{buffer}", buffer.ToString());
                 await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
