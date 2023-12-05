@@ -36,7 +36,6 @@ namespace DsmrHub.Dsmr
             {
                 try
                 {
-                    _logger.LogInformation("Connection to {port} initializing",  _dsmrClientOptions.ComPort);
                     _serialPort.DataReceived += (_, _) =>
                     {
                         lock (_queueLock)
@@ -45,7 +44,7 @@ namespace DsmrHub.Dsmr
                         }
                     };
                     _serialPort.Open();
-                    _logger.LogInformation("Connection to {port} initialized", _dsmrClientOptions.ComPort);
+                    _logger.LogInformation("Connected on {port}", _dsmrClientOptions.ComPort);
                     await ProcessReceivedData(cancellationToken);
                 }
                 catch (Exception e)
@@ -55,7 +54,7 @@ namespace DsmrHub.Dsmr
 
                 if (cancellationToken.IsCancellationRequested) break;
 
-                _logger.LogInformation("Reconnect in 5 seconds.");
+                _logger.LogInformation("Reconnecting in 5 seconds...");
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
         }
@@ -71,7 +70,7 @@ namespace DsmrHub.Dsmr
                 // stop loop, disconnect to trigger reconnect
                 if (_receiveTimeoutTimer.Elapsed > _dsmrClientOptions.ReceiveTimeout)
                 {
-                    _logger.LogWarning("Receive timeout hit ({timeout})", _dsmrClientOptions.ReceiveTimeout);
+                    _logger.LogWarning("Nothing received after {timeout}. Closing connection...", _dsmrClientOptions.ReceiveTimeout);
                     _serialPort.Close();
                     break;
                 }
