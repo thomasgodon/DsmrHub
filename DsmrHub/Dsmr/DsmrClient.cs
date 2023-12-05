@@ -77,8 +77,15 @@ namespace DsmrHub.Dsmr
                     }
                 }
 
-                await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
                 _logger.LogTrace(buffer.ToString());
+                try
+                {
+                    await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "{message}", e.Message);
+                }
                 buffer.Clear();
             }
         }

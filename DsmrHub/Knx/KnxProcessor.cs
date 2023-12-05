@@ -11,10 +11,10 @@ namespace DsmrHub.Knx
     {
         private readonly ILogger<KnxProcessor> _logger;
         private readonly KnxOptions _knxOptions;
-        private readonly KnxBus _knxClient;
         private readonly Dictionary<string, KnxTelegramValue> _telegrams;
         private readonly Dictionary<GroupAddress, string> _capabilityAddressMapping;
         private readonly object _telegramsLock = new();
+        private KnxBus? _knxBus;
 
         public KnxProcessor(ILogger<KnxProcessor> logger, IOptions<KnxOptions> knxOptions)
         {
@@ -22,29 +22,26 @@ namespace DsmrHub.Knx
             _knxOptions = knxOptions.Value;
             _telegrams = BuildTelegrams(_knxOptions);
             _capabilityAddressMapping = BuildCapabilityAddressMapping(_knxOptions);
-            _knxClient = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
+        }
+
+        public async Task ConnectAsync(CancellationToken cancellationToken)
+        {
+            if (_knxBus?.ConnectionState == BusConnectionState.Connected)
+            {
+                return;
+            }
+
+            _knxBus = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
+            _knxBus.GroupMessageReceived += async (_, args) =>
+            {
+                await ProcessGroupMessageReceivedAsync(args, cancellationToken);
+            };
+            await _knxBus.ConnectAsync(cancellationToken);
         }
 
         public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
         {
             if (_knxOptions.Enabled is false) return;
-
-            // connect to the KNXnet/IP gateway
-            if (_knxClient.ConnectionState != BusConnectionState.Connected)
-            {
-                try
-                {
-                    _knxClient.GroupMessageReceived += async (_, args) =>
-                    {
-                        await ProcessGroupMessageReceivedAsync(args, cancellationToken);
-                    };
-                    await _knxClient.ConnectAsync(cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Couldn't connect to '{address}'", _knxOptions.Host);
-                }
-            }
 
             // get updated values
             var updatedValues = UpdateValues(telegram)
@@ -207,8 +204,19 @@ namespace DsmrHub.Knx
                 return;
             }
 
+            if (_knxBus?.ConnectionState != BusConnectionState.Connected)
+            {
+                await ConnectAsync(cancellationToken);
+            }
+
+            if (_knxBus == null)
+            {
+                _logger.LogError("Something went wrong after connecting to knx client");
+                return;
+            }
+
             var groupValue = new GroupValue(value.Value.Reverse().ToArray());
-            await _knxClient.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
+            await _knxBus.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
         }
 
         private static Dictionary<string, KnxTelegramValue> BuildTelegrams(KnxOptions knxOptions)
