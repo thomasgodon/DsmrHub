@@ -32,7 +32,7 @@ namespace DsmrHub.Knx
             }
 
             _knxBus = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
-            _knxBus.InterfaceConfiguration.IndividualAddress = _knxOptions.IndividualAddress;
+            await _knxBus.SetInterfaceConfigurationAsync(new BusInterfaceConfiguration(_knxOptions.IndividualAddress), cancellationToken);
             _knxBus.GroupMessageReceived += async (_, args) =>
             {
                 await ProcessGroupMessageReceivedAsync(args, cancellationToken);
