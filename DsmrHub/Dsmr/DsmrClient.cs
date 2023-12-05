@@ -1,4 +1,5 @@
-﻿using System.IO.Ports;
+﻿using System.Diagnostics;
+using System.IO.Ports;
 using System.Text;
 using Microsoft.Extensions.Options;
 
@@ -12,6 +13,7 @@ namespace DsmrHub.Dsmr
         private readonly IDsmrProcessorService _dsmrProcessorService;
         private readonly Queue<string> _queue;
         private readonly object _queueLock = new();
+        private readonly Stopwatch _receiveTimeout = new();
 
         public DsmrClient(ILogger<DsmrClient> logger, SerialPort serialPort, IDsmrProcessorService dsmrProcessorService, IOptions<DsmrOptions> dsmrClientOptions)
         {
@@ -61,9 +63,17 @@ namespace DsmrHub.Dsmr
         private async Task ProcessReceivedData(CancellationToken cancellationToken)
         {
             var buffer = new StringBuilder();
+            _receiveTimeout.Start();
             while (cancellationToken.IsCancellationRequested is false && _serialPort.IsOpen)
             {
                 await Task.Delay(100, cancellationToken);
+
+                // stop loop, disconnect to trigger reconnect
+                if (_receiveTimeout.Elapsed > _dsmrClientOptions.ReceiveTimeout)
+                {
+                    _serialPort.Close();
+                    break;
+                }
 
                 lock (_queueLock)
                 {

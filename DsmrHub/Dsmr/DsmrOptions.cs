@@ -9,5 +9,6 @@
         public int Parity { get; init; }
         public int DataBits { get; init; }
         public int StopBits { get; init; }
+        public TimeSpan ReceiveTimeout { get; init; } = TimeSpan.FromSeconds(10);
     }
 }
