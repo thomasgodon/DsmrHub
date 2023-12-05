@@ -63,7 +63,7 @@ namespace DsmrHub.Dsmr
         private async Task ProcessReceivedData(CancellationToken cancellationToken)
         {
             var buffer = new StringBuilder();
-            _receiveTimeoutTimer.Start();
+            _receiveTimeoutTimer.Restart();
             while (cancellationToken.IsCancellationRequested is false && _serialPort.IsOpen)
             {
                 await Task.Delay(100, cancellationToken);
