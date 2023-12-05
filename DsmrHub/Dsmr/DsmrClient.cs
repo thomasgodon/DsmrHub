@@ -43,6 +43,7 @@ namespace DsmrHub.Dsmr
                         }
                     };
                     _serialPort.Open();
+                    _logger.LogInformation("Connection to {port} initialized", _dsmrClientOptions.ComPort);
                     await ProcessReceivedData(cancellationToken);
                 }
                 catch (Exception e)
@@ -87,6 +88,11 @@ namespace DsmrHub.Dsmr
                     _logger.LogError(e, "{message}", e.Message);
                 }
                 buffer.Clear();
+            }
+
+            if (_serialPort.IsOpen is false)
+            {
+                _logger.LogInformation("Connection to {port} closed", _dsmrClientOptions.ComPort);
             }
         }
     }
