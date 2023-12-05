@@ -4,6 +4,7 @@ using Knx.Falcon;
 using Knx.Falcon.Configuration;
 using Knx.Falcon.Sdk;
 using Microsoft.Extensions.Options;
+using static System.Threading.Tasks.Task;
 
 namespace DsmrHub.Knx
 {
@@ -248,7 +249,12 @@ namespace DsmrHub.Knx
             }
 
             var groupValue = new GroupValue(value.Value.Reverse().ToArray());
-            await _knxBus.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
+            var writeCancellationToken = new CancellationTokenSource();
+            await WhenAny(
+                _knxBus.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, writeCancellationToken.Token),
+                Delay(TimeSpan.FromMilliseconds(100), cancellationToken));
+
+            writeCancellationToken.Cancel();
         }
 
         private static Dictionary<string, KnxTelegramValue> BuildTelegrams(KnxOptions knxOptions)
