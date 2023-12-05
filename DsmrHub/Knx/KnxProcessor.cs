@@ -61,7 +61,7 @@ namespace DsmrHub.Knx
             // send updated values
             foreach (var updatedValue in updatedValues)
             {
-                await SendValueAsync(updatedValue!, cancellationToken);
+                await WriteGroupValueAsync(updatedValue!, cancellationToken);
             }
         }
 
@@ -86,7 +86,7 @@ namespace DsmrHub.Knx
                 }
             }
 
-            await SendValueAsync(knxTelegramValue, cancellationToken);
+            await RespondGroupValueAsync(knxTelegramValue, cancellationToken);
         }
 
         private IEnumerable<KnxTelegramValue?> UpdateValues(Telegram telegram)
@@ -207,7 +207,29 @@ namespace DsmrHub.Knx
             return _telegrams[capability];
         }
 
-        private async Task SendValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
+        private async Task RespondGroupValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
+        {
+            if (value.Value is null)
+            {
+                return;
+            }
+
+            if (_knxBus?.ConnectionState != BusConnectionState.Connected)
+            {
+                await ConnectAsync(cancellationToken);
+            }
+
+            if (_knxBus == null)
+            {
+                _logger.LogError("Something went wrong after connecting to knx client");
+                return;
+            }
+
+            var groupValue = new GroupValue(value.Value.Reverse().ToArray());
+            await _knxBus.RespondGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
+        }
+
+        private async Task WriteGroupValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
         {
             if (value.Value is null)
             {
