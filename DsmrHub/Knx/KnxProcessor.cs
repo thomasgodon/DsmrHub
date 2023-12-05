@@ -32,6 +32,7 @@ namespace DsmrHub.Knx
             }
 
             _knxBus = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
+            _knxBus.InterfaceConfiguration.IndividualAddress = _knxOptions.IndividualAddress;
             _knxBus.GroupMessageReceived += async (_, args) =>
             {
                 await ProcessGroupMessageReceivedAsync(args, cancellationToken);
@@ -43,6 +44,12 @@ namespace DsmrHub.Knx
         {
             if (_knxOptions.Enabled is false) return;
 
+            var processCancellationToken = new CancellationTokenSource();
+            cancellationToken.Register(() =>
+            {
+                processCancellationToken.Cancel();
+            });
+
             // get updated values
             var updatedValues = UpdateValues(telegram)
                 .Where(m => m is not null)
@@ -53,6 +60,16 @@ namespace DsmrHub.Knx
             {
                 await SendValueAsync(updatedValue!, cancellationToken);
             }
+        }
+
+        private Task RunProcessTimerAsync(CancellationToken cancellationToken)
+        {
+            while (cancellationToken.IsCancellationRequested is false)
+            {
+
+            }
+
+            return Task.CompletedTask;
         }
 
         private async Task ProcessGroupMessageReceivedAsync(GroupEventArgs e, CancellationToken cancellationToken)
