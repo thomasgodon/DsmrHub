@@ -7,8 +7,8 @@ namespace DsmrHub.Udp.Extensions
     {
         public static IServiceCollection AddUdpSender(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
-            serviceCollection.Configure<IotCentralOptions>(configuration.GetSection(nameof(IotCentralOptions)));
-            serviceCollection.AddTransient<IDsmrProcessor, IotCentralProcessor>();
+            serviceCollection.Configure<UdpOptions>(configuration.GetSection(nameof(UdpOptions)));
+            serviceCollection.AddTransient<IDsmrProcessor, UdpProcessor>();
             return serviceCollection;
         }
     }
