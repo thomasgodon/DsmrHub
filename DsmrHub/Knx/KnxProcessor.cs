@@ -4,6 +4,7 @@ using Knx.Falcon;
 using Knx.Falcon.Configuration;
 using Knx.Falcon.Sdk;
 using Microsoft.Extensions.Options;
+using static System.Threading.Tasks.Task;
 
 namespace DsmrHub.Knx
 {
@@ -11,10 +12,10 @@ namespace DsmrHub.Knx
     {
         private readonly ILogger<KnxProcessor> _logger;
         private readonly KnxOptions _knxOptions;
-        private readonly KnxBus _knxClient;
         private readonly Dictionary<string, KnxTelegramValue> _telegrams;
         private readonly Dictionary<GroupAddress, string> _capabilityAddressMapping;
         private readonly object _telegramsLock = new();
+        private KnxBus? _knxBus;
 
         public KnxProcessor(ILogger<KnxProcessor> logger, IOptions<KnxOptions> knxOptions)
         {
@@ -22,29 +23,36 @@ namespace DsmrHub.Knx
             _knxOptions = knxOptions.Value;
             _telegrams = BuildTelegrams(_knxOptions);
             _capabilityAddressMapping = BuildCapabilityAddressMapping(_knxOptions);
-            _knxClient = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
+        }
+
+        public async Task ConnectAsync(CancellationToken cancellationToken)
+        {
+            if (_knxBus?.ConnectionState == BusConnectionState.Connected)
+            {
+                return;
+            }
+
+            _knxBus = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
+            _knxBus.GroupMessageReceived += async (_, args) =>
+            {
+                await ProcessGroupMessageReceivedAsync(args, cancellationToken);
+            };
+
+            _logger.LogInformation("Connecting to {host}", _knxOptions.Host);
+            await _knxBus.ConnectAsync(cancellationToken);
+            await _knxBus.SetInterfaceConfigurationAsync(new BusInterfaceConfiguration(_knxOptions.IndividualAddress), cancellationToken);
+            _logger.LogInformation("Connected to {host}", _knxOptions.Host);
         }
 
         public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
         {
             if (_knxOptions.Enabled is false) return;
 
-            // connect to the KNXnet/IP gateway
-            if (_knxClient.ConnectionState != BusConnectionState.Connected)
+            var processCancellationToken = new CancellationTokenSource();
+            cancellationToken.Register(() =>
             {
-                try
-                {
-                    _knxClient.GroupMessageReceived += async (_, args) =>
-                    {
-                        await ProcessGroupMessageReceivedAsync(args, cancellationToken);
-                    };
-                    await _knxClient.ConnectAsync(cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Couldn't connect to '{address}'", _knxOptions.Host);
-                }
-            }
+                processCancellationToken.Cancel();
+            });
 
             // get updated values
             var updatedValues = UpdateValues(telegram)
@@ -54,7 +62,7 @@ namespace DsmrHub.Knx
             // send updated values
             foreach (var updatedValue in updatedValues)
             {
-                await SendValueAsync(updatedValue!, cancellationToken);
+                await WriteGroupValueAsync(updatedValue!, cancellationToken);
             }
         }
 
@@ -79,7 +87,7 @@ namespace DsmrHub.Knx
                 }
             }
 
-            await SendValueAsync(knxTelegramValue, cancellationToken);
+            await RespondGroupValueAsync(knxTelegramValue, cancellationToken);
         }
 
         private IEnumerable<KnxTelegramValue?> UpdateValues(Telegram telegram)
@@ -200,15 +208,55 @@ namespace DsmrHub.Knx
             return _telegrams[capability];
         }
 
-        private async Task SendValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
+        private async Task RespondGroupValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
         {
             if (value.Value is null)
             {
                 return;
             }
 
+            if (_knxBus?.ConnectionState != BusConnectionState.Connected)
+            {
+                await ConnectAsync(cancellationToken);
+            }
+
+            if (_knxBus == null)
+            {
+                _logger.LogError("Something went wrong after connecting to knx client");
+                return;
+            }
+
             var groupValue = new GroupValue(value.Value.Reverse().ToArray());
-            await _knxClient.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
+            await _knxBus.RespondGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
+        }
+
+        private async Task WriteGroupValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
+        {
+            if (value.Value is null)
+            {
+                return;
+            }
+
+            if (_knxBus?.ConnectionState != BusConnectionState.Connected)
+            {
+                await ConnectAsync(cancellationToken);
+            }
+
+            if (_knxBus == null)
+            {
+                _logger.LogError("Something went wrong after connecting to knx client");
+                return;
+            }
+
+            var groupValue = new GroupValue(value.Value.Reverse().ToArray());
+            var writeCancellationToken = new CancellationTokenSource();
+
+            // TODO: retry
+            await WhenAny(
+                _knxBus.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, writeCancellationToken.Token),
+                Delay(TimeSpan.FromMilliseconds(100), cancellationToken));
+
+            writeCancellationToken.Cancel();
         }
 
         private static Dictionary<string, KnxTelegramValue> BuildTelegrams(KnxOptions knxOptions)

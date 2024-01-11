@@ -13,7 +13,7 @@ namespace DsmrHub.Mqtt.Extensions
 
         public static IServiceCollection AddMqttClient(this IServiceCollection serviceCollection)
         {
-            serviceCollection.AddTransient<IDsmrProcessor, MqttProcessor>();
+            serviceCollection.AddSingleton<IDsmrProcessor, MqttProcessor>();
 
             return serviceCollection;
         }

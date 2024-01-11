@@ -1,4 +1,5 @@
-﻿using System.IO.Ports;
+﻿using System.Diagnostics;
+using System.IO.Ports;
 using System.Text;
 using Microsoft.Extensions.Options;
 
@@ -12,6 +13,9 @@ namespace DsmrHub.Dsmr
         private readonly IDsmrProcessorService _dsmrProcessorService;
         private readonly Queue<string> _queue;
         private readonly object _queueLock = new();
+        private readonly Stopwatch _receiveTimeoutTimer = new();
+        private readonly Stopwatch _lastReceivedTimeTimer = new();
+        private DateTime? _lastReceivedTime;
 
         public DsmrClient(ILogger<DsmrClient> logger, SerialPort serialPort, IDsmrProcessorService dsmrProcessorService, IOptions<DsmrOptions> dsmrClientOptions)
         {
@@ -26,15 +30,16 @@ namespace DsmrHub.Dsmr
             _serialPort.StopBits = (StopBits)_dsmrClientOptions.StopBits;
             _serialPort.DataBits = _dsmrClientOptions.DataBits;
             _serialPort.Parity = (Parity)_dsmrClientOptions.Parity;
+
+            _lastReceivedTimeTimer.Start();
         }
 
         public async Task Start(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (cancellationToken.IsCancellationRequested is false)
             {
                 try
                 {
-                    _logger.LogInformation("connection to {port} initializing",  _dsmrClientOptions.ComPort);
                     _serialPort.DataReceived += (_, _) =>
                     {
                         lock (_queueLock)
@@ -43,16 +48,17 @@ namespace DsmrHub.Dsmr
                         }
                     };
                     _serialPort.Open();
+                    _logger.LogInformation("Connected on {port}", _dsmrClientOptions.ComPort);
                     await ProcessReceivedData(cancellationToken);
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, e.Message);
+                    _logger.LogError(e, "{message}", e.Message);
                 }
 
-                if (cancellationToken.IsCancellationRequested) continue;
+                if (cancellationToken.IsCancellationRequested) break;
 
-                _logger.LogInformation("Retry in 5 seconds.");
+                _logger.LogInformation("Reconnecting in 5 seconds...");
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
         }
@@ -60,9 +66,25 @@ namespace DsmrHub.Dsmr
         private async Task ProcessReceivedData(CancellationToken cancellationToken)
         {
             var buffer = new StringBuilder();
-            while (!cancellationToken.IsCancellationRequested)
+            _receiveTimeoutTimer.Restart();
+            while (cancellationToken.IsCancellationRequested is false && _serialPort.IsOpen)
             {
                 await Task.Delay(100, cancellationToken);
+
+                // print last received every minute
+                if (_lastReceivedTimeTimer.Elapsed > TimeSpan.FromMinutes(1) && _lastReceivedTime is not null)
+                {
+                    _logger.LogInformation("Last telegram received at: {time}", _lastReceivedTime);
+                    _lastReceivedTimeTimer.Restart();
+                }
+
+                // stop loop, disconnect to trigger reconnect
+                if (_receiveTimeoutTimer.Elapsed > _dsmrClientOptions.ReceiveTimeout)
+                {
+                    _logger.LogWarning("Nothing received after {timeout}. Closing connection...", _dsmrClientOptions.ReceiveTimeout);
+                    _serialPort.Close();
+                    break;
+                }
 
                 lock (_queueLock)
                 {
@@ -77,9 +99,16 @@ namespace DsmrHub.Dsmr
                     }
                 }
 
+                _lastReceivedTime = DateTime.Now;
+                _receiveTimeoutTimer.Restart();
+                _logger.LogTrace("{buffer}", buffer.ToString());
                 await _dsmrProcessorService.ProcessMessage(buffer.ToString(), cancellationToken);
-                _logger.LogTrace(buffer.ToString());
                 buffer.Clear();
+            }
+
+            if (_serialPort.IsOpen is false)
+            {
+                _logger.LogInformation("Connection to {port} closed", _dsmrClientOptions.ComPort);
             }
         }
     }
