@@ -1,4 +1,5 @@
 ﻿using DsmrHub.Dsmr;
+using DsmrHub.IotHub.Models;
 
 namespace DsmrHub.IotHub.Extensions
 {
@@ -7,6 +8,7 @@ namespace DsmrHub.IotHub.Extensions
         public static IServiceCollection AddIotHub(this IServiceCollection serviceCollection, IConfiguration configuration)
         {
             serviceCollection.Configure<IotHubOptions>(configuration.GetSection(nameof(IotHubOptions)));
+            serviceCollection.AddSingleton<IIotHubDevicesService, IotHubDevicesService>();
             serviceCollection.AddSingleton<IDsmrProcessor, IotHubProcessor>();
             return serviceCollection;
         }
