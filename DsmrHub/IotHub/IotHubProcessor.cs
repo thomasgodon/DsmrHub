@@ -9,25 +9,25 @@ using Microsoft.Azure.Devices.Shared;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 
-namespace DsmrHub.IotCentral
+namespace DsmrHub.IotHub
 {
-    internal class IotCentralProcessor : IDsmrProcessor
+    internal class IotHubProcessor : IDsmrProcessor
     {
-        private readonly ILogger<IotCentralProcessor> _logger;
-        private readonly IotCentralOptions _iotCentralOptions;
+        private readonly ILogger<IotHubProcessor> _logger;
+        private readonly IotHubOptions _iotHubOptions;
         private readonly Stopwatch _registerInterval;
         private DeviceClient _deviceClient = default!;
 
-        public IotCentralProcessor(ILogger<IotCentralProcessor> logger, IOptions<IotCentralOptions> iotCentralOptions)
+        public IotHubProcessor(ILogger<IotHubProcessor> logger, IOptions<IotHubOptions> iotHubOptions)
         {
             _logger = logger;
-            _iotCentralOptions = iotCentralOptions.Value;
+            _iotHubOptions = iotHubOptions.Value;
             _registerInterval = new Stopwatch();
         }
 
         public async Task ProcessTelegram(Telegram telegram, CancellationToken cancellationToken)
         {
-            if (!_iotCentralOptions.Enabled) return;
+            if (!_iotHubOptions.Enabled) return;
 
             try
             {
@@ -45,7 +45,7 @@ namespace DsmrHub.IotCentral
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Could not send message to device {deviceId}", _iotCentralOptions.DeviceId);
+                _logger.LogError(e, "Could not send message to device {deviceId}", _iotHubOptions.DeviceId);
                 await CreateDeviceClientAsync(cancellationToken);
             }
         }
@@ -72,10 +72,10 @@ namespace DsmrHub.IotCentral
         {
             try
             {
-                using var symmetricKeyProvider = new SecurityProviderSymmetricKey(_iotCentralOptions.DeviceId, _iotCentralOptions.PrimaryKey, _iotCentralOptions.SecondaryKey);
-                var dps = ProvisioningDeviceClient.Create(_iotCentralOptions.ProvisioningUri, _iotCentralOptions.IdScope, symmetricKeyProvider, new ProvisioningTransportHandlerAmqp());
+                using var symmetricKeyProvider = new SecurityProviderSymmetricKey(_iotHubOptions.DeviceId, _iotHubOptions.PrimaryKey, _iotHubOptions.SecondaryKey);
+                var dps = ProvisioningDeviceClient.Create(_iotHubOptions.ProvisioningUri, _iotHubOptions.IdScope, symmetricKeyProvider, new ProvisioningTransportHandlerAmqp());
                 var registerResult = await dps.RegisterAsync(cancellationToken);
-                _logger.LogInformation("New registration succeeded for device {deviceId}", _iotCentralOptions.DeviceId);
+                _logger.LogInformation("New registration succeeded for device {deviceId}", _iotHubOptions.DeviceId);
                 return registerResult.AssignedHub;
             }
             catch (Exception e)
@@ -87,7 +87,7 @@ namespace DsmrHub.IotCentral
 
         private DeviceClient CreateDeviceClient(string assignedIotHub)
         {
-            var authMethod = new DeviceAuthenticationWithRegistrySymmetricKey(_iotCentralOptions.DeviceId, _iotCentralOptions.PrimaryKey);
+            var authMethod = new DeviceAuthenticationWithRegistrySymmetricKey(_iotHubOptions.DeviceId, _iotHubOptions.PrimaryKey);
             var client = DeviceClient.Create(assignedIotHub, authMethod, TransportType.Amqp);
             return client;
         }

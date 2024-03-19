@@ -1,6 +1,6 @@
-﻿namespace DsmrHub.IotCentral
+﻿namespace DsmrHub.IotHub
 {
-    internal class IotCentralOptions
+    internal class IotHubOptions
     {
         public bool Enabled { get; set; } = default!;
         public string IdScope { get; set; } = default!;
