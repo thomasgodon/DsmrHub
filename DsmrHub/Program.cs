@@ -1,6 +1,6 @@
 using DsmrHub;
 using DsmrHub.Dsmr.Extensions;
-using DsmrHub.IotCentral.Extensions;
+using DsmrHub.IotHub.Extensions;
 using DsmrHub.Knx.Extensions;
 using DsmrHub.Mqtt.Extensions;
 using DsmrHub.Udp.Extensions;
@@ -14,7 +14,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddMqttClient();
         services.AddMqttConfiguration(configuration);
         services.AddUdpSender(configuration);
-        services.AddIotCentral(configuration);
+        services.AddIotHub(configuration);
         services.AddKnx(configuration);
         services.AddHostedService<Worker>();
     })
