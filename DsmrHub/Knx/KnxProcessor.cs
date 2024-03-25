@@ -134,6 +134,10 @@ namespace DsmrHub.Knx
                     ? UpdateValue(nameof(Telegram.PowerDeliveredL3), BitConverter.GetBytes((float)(telegram.PowerDeliveredL3.Value * 1000)))
                     : null;
 
+                yield return telegram.PowerDeliveredCurrentAvg?.Value is not null
+                    ? UpdateValue(nameof(Telegram.PowerDeliveredCurrentAvg), BitConverter.GetBytes((float)(telegram.PowerDeliveredCurrentAvg.Value * 1000)))
+                    : null;
+
                 // Power returned - 14.056
                 yield return telegram.PowerReturned?.Value is not null
                     ? UpdateValue(nameof(Telegram.PowerReturned), BitConverter.GetBytes((float)(telegram.PowerReturned.Value * 1000)))
@@ -185,6 +189,11 @@ namespace DsmrHub.Knx
                 // Gas Valve position - 1.001
                 yield return telegram.GasValvePosition is not null
                     ? UpdateValue(nameof(Telegram.GasValvePosition), BitConverter.GetBytes(telegram.GasValvePosition.Value == 1))
+                    : null;
+
+                // Energy Delivered Max Running Month - 13.010
+                yield return telegram.EnergyDeliveredMaxRunningMonth?.Value?.Value is not null
+                    ? UpdateValue(nameof(Telegram.EnergyDeliveredMaxRunningMonth), BitConverter.GetBytes((uint)(telegram.EnergyDeliveredMaxRunningMonth.Value.Value * 1000)))
                     : null;
             }
         }
