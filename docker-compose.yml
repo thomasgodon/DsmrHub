@@ -1,0 +1,32 @@
+services:
+  dsmrhub:
+    image: ghcr.io/thomasgodon/dsmrhub:latest
+    # To build locally instead of pulling the published image, comment out `image:` above
+    # and uncomment the next line:
+    # build: .
+    container_name: dsmrhub
+    restart: unless-stopped
+
+    # Pass the host's P1 serial adapter into the container. Adjust the host path
+    # (/dev/ttyUSB0, /dev/ttyAMA0, /dev/serial/by-id/...) to match your cable.
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+
+    ports:
+      - "8080:8080" # web dashboard -> http://localhost:8080
+
+    environment:
+      # --- DSMR serial source ---
+      DsmrOptions__ComPort: "/dev/ttyUSB0"
+      # DsmrOptions__BaudRate: "115200"
+      # Replay the bundled example telegram instead of reading the serial port (no hardware needed):
+      # DsmrOptions__UseExampleTelegram: "true"
+
+      # --- Dashboard ---
+      # DashboardOptions__Enabled: "true"
+      # DashboardOptions__Port: "8080"
+
+      # --- Sinks (all disabled by default; enable as needed) ---
+      # MqttOptions__Enabled: "true"
+      # UdpOptions__Enabled: "true"
+      # UdpOptions__Host: "192.168.0.255"

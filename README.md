@@ -82,6 +82,57 @@ dotnet run --project DsmrHub
 To replay the bundled example telegram stream instead of reading a serial port, set
 `DsmrOptions:UseExampleTelegram` to `true`.
 
+## Running with Docker
+
+A multi-stage `Dockerfile` publishes a framework-dependent image on `mcr.microsoft.com/dotnet/aspnet:10.0`
+and runs as the non-root `$APP_UID` user. The dashboard is exposed on port `8080`.
+
+Config is supplied via environment variables using the standard double-underscore convention
+(`Section__Key`, e.g. `DsmrOptions__ComPort`).
+
+### Quickstart (docker compose)
+
+`docker-compose.yml` passes a host serial adapter into the container and maps the dashboard port:
+
+```pwsh
+docker compose up -d
+```
+
+Then open `http://localhost:8080`. Adjust the `devices:` host path (`/dev/ttyUSB0`,
+`/dev/ttyAMA0`, `/dev/serial/by-id/...`) and the `environment:` overrides to match your setup.
+
+### docker run
+
+```pwsh
+# Real meter: pass the serial device through and point ComPort at it
+docker run -d --name dsmrhub --device=/dev/ttyUSB0 `
+  -e DsmrOptions__ComPort=/dev/ttyUSB0 -p 8080:8080 `
+  ghcr.io/thomasgodon/dsmrhub:latest
+
+# No hardware: replay the bundled example telegram
+docker run --rm -e DsmrOptions__UseExampleTelegram=true -p 8080:8080 `
+  ghcr.io/thomasgodon/dsmrhub:latest
+```
+
+Note: serial port reads require a Linux host with the P1 USB cable attached — Docker `--device`
+passthrough is not available on Docker Desktop for Windows/macOS, so use `UseExampleTelegram`
+(or the UDP source) when running there.
+
+## Releases
+
+Pushing a `vX.Y.Z` tag triggers the **Docker Publish** workflow
+(`.github/workflows/docker-publish.yml`), which builds the image and pushes it to
+`ghcr.io/thomasgodon/dsmrhub` tagged with the full version, `major.minor`, and `latest`:
+
+```pwsh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Pushes and PRs to `main` run the **Integration Tests** workflow
+(`.github/workflows/integration-tests.yml`): restore, build, and `dotnet test` against
+`DsmrHub.slnx`, with test results uploaded as an artifact.
+
 ## Configuration
 
 All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by default.
