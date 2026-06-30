@@ -8,7 +8,9 @@ public sealed record ElectricityPhase(
     PowerValue? PowerDelivered,
     PowerValue? PowerReturned,
     VoltageValue? Voltage,
-    CurrentValue? Current)
+    CurrentValue? Current,
+    int? VoltageSags = null,
+    int? VoltageSwells = null)
 {
     public static readonly ElectricityPhase Empty = new(null, null, null, null);
 }

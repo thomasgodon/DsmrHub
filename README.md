@@ -17,7 +17,7 @@ DsmrHub.slnx
 │                          (except MediatR.Contracts for the notification marker).
 ├─ DsmrHub.Application     Ports (ITelegramParser, IMeterReadingSource) and the
 │                          TelegramIngestionService use case. Depends only on Domain + MediatR.
-├─ DsmrHub.Infrastructure  Adapters: DSMR parser/mapper, serial + simulator sources, and one
+├─ DsmrHub.Infrastructure  Adapters: in-house DSMR/e-MUCS P1 parser, serial + simulator sources, and one
 │                          MediatR notification handler per sink (MQTT, KNX, IoT Hub, UDP).
 ├─ DsmrHub                 Console worker (composition root): wiring, configuration, Worker.
 └─ DsmrHub.Tests           xUnit tests for value objects, the aggregate, and telegram mapping.
@@ -31,7 +31,7 @@ Dependency direction is enforced by project references: `Domain ← Application 
 IMeterReadingSource (serial | simulator)
     → raw telegram string
     → TelegramIngestionService
-    → ITelegramParser  (DsmrTelegramParser: DSMRParser.Net Telegram → MeterReading)
+    → ITelegramParser  (DsmrTelegramParser: in-house P1 parse + CRC16 check → MeterReading)
     → IPublisher.Publish(MeterReadingReceived)
     → INotificationHandler<MeterReadingReceived>  ×  { MQTT, KNX, IoT Hub, UDP }
 ```
@@ -42,10 +42,13 @@ Each sink handler is gated by its own `Enabled` flag, so disabled sinks are no-o
 
 `MeterReading` is the aggregate root. Measurements are unit-aware value objects that validate their
 own invariants: `EnergyValue` (kWh), `PowerValue` (kW, with a `Watts` helper), `VoltageValue` (V),
-`CurrentValue` (A), `GasVolume` (m3). Per-phase data is grouped in `ElectricityPhase`; electricity and
-gas measurements live in `ElectricityReading` / `GasReading`. The DSMR library's `Telegram` is mapped
-to this model in one place — `TelegramMapper` (infrastructure) — so the rest of the code is
-library-agnostic.
+`CurrentValue` (A), `GasVolume` / `WaterVolume` (m3). Per-phase data (incl. voltage sags/swells) is
+grouped in `ElectricityPhase`; electricity, gas and water measurements live in `ElectricityReading` /
+`GasReading` / `WaterReading`, and every M-Bus channel is also preserved verbatim in `MBusDevices`.
+`ElectricityReading` additionally captures the Fluvius e-MUCS extras: power-failure counts and log,
+breaker state, limiter/fuse thresholds, and the monthly max-demand history. A raw telegram is
+tokenised by OBIS code (`P1Telegram`, CRC16-validated) and mapped to this model in one place —
+`MeterReadingFactory` (infrastructure) — so the rest of the code is OBIS-agnostic.
 
 ## Requirements
 
