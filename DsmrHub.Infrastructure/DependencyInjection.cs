@@ -1,5 +1,7 @@
 using DsmrHub.Application.Abstractions;
+using DsmrHub.Application.Dashboard.Options;
 using DsmrHub.Domain.Events;
+using DsmrHub.Infrastructure.Dashboard;
 using DsmrHub.Infrastructure.Dsmr;
 using DsmrHub.Infrastructure.IotHub;
 using DsmrHub.Infrastructure.Knx;
@@ -27,6 +29,7 @@ public static class DependencyInjection
         services.Configure<UdpOptions>(configuration.GetSection(nameof(UdpOptions)));
         services.Configure<IotHubOptions>(configuration.GetSection(nameof(IotHubOptions)));
         services.Configure<KnxOptions>(configuration.GetSection(nameof(KnxOptions)));
+        services.Configure<DashboardOptions>(configuration.GetSection(nameof(DashboardOptions)));
 
         // DSMR parsing + telegram source (serial port or simulator, chosen by configuration)
         services.AddSingleton<ITelegramParser, DsmrTelegramParser>();
@@ -46,6 +49,7 @@ public static class DependencyInjection
         services.AddSingleton<INotificationHandler<MeterReadingReceived>, KnxMeterReadingHandler>();
         services.AddSingleton<INotificationHandler<MeterReadingReceived>, IotHubMeterReadingHandler>();
         services.AddTransient<INotificationHandler<MeterReadingReceived>, UdpMeterReadingHandler>();
+        services.AddSingleton<INotificationHandler<MeterReadingReceived>, MeterReadingDashboardHandler>();
 
         return services;
     }

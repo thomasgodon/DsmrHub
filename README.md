@@ -2,7 +2,8 @@
 
 DsmrHub reads Dutch/Belgian Smart Meter (DSMR) telegrams from a serial port (or a built-in
 simulator) and fans the parsed readings out to a configurable set of sinks: an embedded **MQTT**
-broker, a **KNX** bus, **Azure IoT Hub**, and **UDP**.
+broker, a **KNX** bus, **Azure IoT Hub**, and **UDP**. It also serves an optional read-only **web
+dashboard** that shows every DSMR value live.
 
 The codebase follows a Domain-Driven Design / Clean Architecture layout: a rich domain model
 decoupled from the parsing library, an application layer of use cases and ports, an infrastructure
@@ -18,8 +19,10 @@ DsmrHub.slnx
 ├─ DsmrHub.Application     Ports (ITelegramParser, IMeterReadingSource) and the
 │                          TelegramIngestionService use case. Depends only on Domain + MediatR.
 ├─ DsmrHub.Infrastructure  Adapters: in-house DSMR/e-MUCS P1 parser, serial + simulator sources, and one
-│                          MediatR notification handler per sink (MQTT, KNX, IoT Hub, UDP).
-├─ DsmrHub                 Console worker (composition root): wiring, configuration, Worker.
+│                          MediatR notification handler per sink (MQTT, KNX, IoT Hub, UDP) plus the
+│                          dashboard snapshot handler.
+├─ DsmrHub                 Web host (composition root): wiring, configuration, Worker, and the
+│                          dashboard endpoints (static page + Server-Sent Events).
 └─ DsmrHub.Tests           xUnit tests for value objects, the aggregate, and telegram mapping.
 ```
 
@@ -33,10 +36,24 @@ IMeterReadingSource (serial | simulator)
     → TelegramIngestionService
     → ITelegramParser  (DsmrTelegramParser: in-house P1 parse + CRC16 check → MeterReading)
     → IPublisher.Publish(MeterReadingReceived)
-    → INotificationHandler<MeterReadingReceived>  ×  { MQTT, KNX, IoT Hub, UDP }
+    → INotificationHandler<MeterReadingReceived>  ×  { MQTT, KNX, IoT Hub, UDP, Dashboard }
 ```
 
 Each sink handler is gated by its own `Enabled` flag, so disabled sinks are no-ops.
+
+## Web dashboard
+
+When `DashboardOptions:Enabled` is `true` (the default), the host binds Kestrel to
+`DashboardOptions:Port` (default `8080`) and serves a single-page, read-only dashboard at
+`http://<host>:<port>/` showing **all** DSMR values: identity, energy registers, live power,
+per-phase voltage/current/power, gas, water, every M-Bus channel, the long power-failure log and the
+monthly max-demand history. Any value missing from the telegram (or that could not be parsed) simply
+renders blank ("—").
+
+The dashboard's `MeterReadingDashboardHandler` projects each reading to a `DashboardSnapshot` and
+pushes it as JSON over **Server-Sent Events** (`/events`); the page updates on every telegram with no
+polling. When `DashboardOptions:Enabled` is `false`, no HTTP port is bound and the host behaves like a
+plain worker.
 
 ## Domain model
 
@@ -69,9 +86,10 @@ To replay the bundled example telegram stream instead of reading a serial port, 
 
 All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by default.
 
-| Section         | Purpose                                                                  |
-|-----------------|--------------------------------------------------------------------------|
+| Section            | Purpose                                                               |
+|--------------------|-----------------------------------------------------------------------|
 | `DsmrOptions`   | Serial port (`ComPort`, `BaudRate`, `Parity`, `StopBits`, `DataBits`, `ReceiveTimeout`) and simulator (`UseExampleTelegram`, `SimulationRateInSeconds`). |
+| `DashboardOptions` | `Enabled` (bind the web dashboard, default `true`) and `Port` (default `8080`). |
 | `MqttOptions`   | `Enabled`, `Port`, `Username`, `Password` for the embedded broker.       |
 | `UdpOptions`    | `Enabled`, `Host`. Values are broadcast to fixed ports 10000–10033.      |
 | `IotHubOptions` | `IotDevices[]` — DPS-provisioned devices (`IdScope`, `DeviceId`, keys, `ProvisioningUri`, `SendInterval`). The reading is sent as JSON. |

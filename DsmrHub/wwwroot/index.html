@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>DsmrHub</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0e14'/%3E%3Cpath d='M18 3 L8 18 h6 l-2 11 12-16 h-7 z' fill='%233ecf8e'/%3E%3C/svg%3E" />
+  <style>
+    /* ---- dark (default) palette ---- */
+    :root {
+      --bg: #0a0e14;
+      --bg-elev: #121821;
+      --bg-card: #161d28;
+      --border: #232c3a;
+      --row-line: rgba(255,255,255,.05);
+      --text: #e6edf3;
+      --text-dim: #8b97a7;
+      --text-faint: #5b6573;
+      --accent: #3ecf8e;
+      --accent-2: #4aa3ff;
+      --warn: #f5b942;
+      --ok: #3ecf8e;
+      --off: #5b6573;
+      --bad: #ef5350;
+      --badge-bg: #1d2737;
+      --radius: 16px;
+      --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+      --glow-a: rgba(62,207,142,.08);
+      --glow-b: rgba(74,163,255,.07);
+    }
+    /* ---- light palette ---- */
+    :root[data-theme="light"] {
+      --bg: #f4f6fa;
+      --bg-elev: #ffffff;
+      --bg-card: #ffffff;
+      --border: #e2e7ef;
+      --row-line: rgba(15,23,42,.06);
+      --text: #0f1b2d;
+      --text-dim: #5a6679;
+      --text-faint: #8b97a7;
+      --accent: #15a06a;
+      --accent-2: #2563eb;
+      --warn: #c98a00;
+      --ok: #15a06a;
+      --off: #aab3c0;
+      --bad: #dc2626;
+      --badge-bg: #eef2f8;
+      --shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.08);
+      --glow-a: rgba(21,160,106,.07);
+      --glow-b: rgba(37,99,235,.06);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background:
+        radial-gradient(1200px 600px at 80% -10%, var(--glow-b), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, var(--glow-a), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      font: 15px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      padding: clamp(14px, 3vw, 32px);
+      transition: background-color .25s ease, color .25s ease;
+    }
+
+    .wrap { max-width: 1100px; margin: 0 auto; }
+
+    /* ---- header ---- */
+    header {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px;
+      margin-bottom: clamp(18px, 3vw, 28px);
+    }
+    .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+    .brand h1 { font-size: clamp(20px, 3.5vw, 26px); font-weight: 650; letter-spacing: -.02em; margin: 0; }
+    .brand .sub { color: var(--text-faint); font-size: 13px; }
+
+    .pills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .live { display: inline-flex; align-items: center; gap: 7px; color: var(--text-dim); font-size: 12.5px; }
+    .live .stamp { color: var(--text-faint); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--off); }
+    .dot.ok  { background: var(--ok);  box-shadow: 0 0 8px 0 rgba(62,207,142,.7); }
+    .dot.bad { background: var(--bad); box-shadow: 0 0 8px 0 rgba(239,83,80,.7); }
+    .dot.off { background: var(--off); }
+
+    .theme-toggle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 999px; cursor: pointer;
+      background: var(--bg-elev); border: 1px solid var(--border); color: var(--text);
+      font-size: 16px; line-height: 1; padding: 0; transition: background-color .2s ease, border-color .2s ease;
+    }
+    .theme-toggle:hover { border-color: var(--accent); }
+
+    /* ---- station strip ---- */
+    .station {
+      display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      margin-bottom: clamp(14px, 2.5vw, 22px);
+    }
+    .stat {
+      background: linear-gradient(180deg, var(--bg-card), var(--bg-elev));
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 18px; box-shadow: var(--shadow);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat .name { color: var(--text-dim); font-size: 12px; font-weight: 550; text-transform: uppercase; letter-spacing: .06em; }
+    .stat .value { font-size: clamp(22px, 4vw, 30px); font-weight: 680; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .stat .value .unit { font-size: .45em; color: var(--text-dim); font-weight: 550; margin-left: 4px; }
+
+    /* ---- cards ---- */
+    .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); margin-bottom: clamp(14px, 2.5vw, 22px); }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);
+    }
+    .card h3 {
+      margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-faint);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card h3 .bar { width: 18px; height: 2px; border-radius: 2px; background: var(--accent); }
+    .card.c-power h3 .bar { background: var(--accent); }
+    .card.c-phase h3 .bar { background: var(--accent-2); }
+    .card.c-energy h3 .bar { background: var(--warn); }
+    .card.c-status h3 .bar { background: var(--text-dim); }
+    .card.c-gas h3 .bar { background: var(--warn); }
+    .card.c-water h3 .bar { background: var(--accent-2); }
+    .row {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      padding: 7px 0; border-top: 1px solid var(--row-line);
+    }
+    .row:first-of-type { border-top: 0; }
+    .row .k { color: var(--text-dim); font-size: 13px; }
+    .row .v { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+    .row .v small { color: var(--text-faint); font-weight: 500; margin-left: 3px; }
+    .row .v.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: var(--badge-bg); color: var(--text); border: 1px solid var(--border);
+    }
+
+    .section-title { margin: 0 2px 10px; font-size: 13px; font-weight: 650; letter-spacing: .02em; color: var(--text-dim); }
+    .block { margin-bottom: clamp(14px, 2.5vw, 22px); }
+
+    table.log { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    table.log th, table.log td { text-align: left; padding: 7px 10px; border-top: 1px solid var(--row-line); font-size: 13px; }
+    table.log th { color: var(--text-faint); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+    table.log tr:first-child th { border-top: 0; }
+    .table-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; box-shadow: var(--shadow); overflow-x: auto; }
+
+    footer { margin-top: 22px; text-align: center; color: var(--text-faint); font-size: 12px; }
+    .offline-banner {
+      display: none; margin-bottom: 14px; padding: 9px 14px; border-radius: 10px;
+      background: color-mix(in srgb, var(--bad) 14%, transparent);
+      border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent); color: var(--bad); font-size: 13px;
+    }
+    body.disconnected .offline-banner { display: block; }
+    .empty { color: var(--text-faint); padding: 12px 4px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>DsmrHub</h1>
+        <span class="sub">Smart meter · DSMR / e-MUCS P1</span>
+      </div>
+      <div class="pills">
+        <span class="live"><span class="dot" id="dot-live"></span><span class="stamp" id="stamp">connecting…</span></span>
+        <button class="theme-toggle" id="theme-toggle" title="Toggle day/night" aria-label="Toggle day/night">🌙</button>
+      </div>
+    </header>
+
+    <div class="offline-banner">Lost connection to DsmrHub — retrying…</div>
+
+    <section class="station">
+      <div class="stat">
+        <span class="name">Power delivered</span>
+        <span class="value"><span id="s-pdel">—</span><span class="unit">kW</span></span>
+      </div>
+      <div class="stat">
+        <span class="name">Power returned</span>
+        <span class="value"><span id="s-pret">—</span><span class="unit">kW</span></span>
+      </div>
+      <div class="stat">
+        <span class="name">Active tariff</span>
+        <span class="value" id="s-tariff">—</span>
+      </div>
+      <div class="stat">
+        <span class="name">DSMR version</span>
+        <span class="value" id="s-version">—</span>
+      </div>
+    </section>
+
+    <div class="cards" id="cards"></div>
+
+    <div class="block">
+      <h2 class="section-title">M-Bus channels</h2>
+      <div class="table-wrap" id="mbus-wrap"><div class="empty" id="mbus-empty">No M-Bus channels reported.</div></div>
+    </div>
+
+    <div class="block">
+      <h2 class="section-title">Long power-failure log</h2>
+      <div class="table-wrap" id="failures-wrap"><div class="empty" id="failures-empty">No power-failure events reported.</div></div>
+    </div>
+
+    <div class="block">
+      <h2 class="section-title">Monthly peak demand</h2>
+      <div class="table-wrap" id="peaks-wrap"><div class="empty" id="peaks-empty">No max-demand history reported.</div></div>
+    </div>
+
+    <footer>DsmrHub live dashboard · read-only · updates on every telegram</footer>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    const fmt = (n, d = 0) => (n === null || n === undefined || Number.isNaN(n))
+      ? "—"
+      : Number(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+
+    const txt = s => (s === null || s === undefined || s === "") ? "—" : s;
+
+    const date = s => s ? new Date(s).toLocaleString() : "—";
+
+    const yesno = b => (b === null || b === undefined) ? "—" : (b ? "open" : "closed");
+
+    function tariffLabel(t) {
+      return { 1: "Tariff 1 (day)", 2: "Tariff 2 (night)" }[t] || "—";
+    }
+    function breakerLabel(b) {
+      return { 0: "Disconnected", 1: "Connected", 2: "Ready for reconnection" }[b] || "—";
+    }
+
+    // seconds -> "Xd Yh Zm Ws" (drops leading zero parts)
+    function fmtDuration(sec) {
+      if (sec === null || sec === undefined || Number.isNaN(sec)) return "—";
+      sec = Math.floor(sec);
+      const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600),
+            m = Math.floor((sec % 3600) / 60), s = sec % 60;
+      const parts = [];
+      if (d) parts.push(d + "d");
+      if (h || d) parts.push(h + "h");
+      if (m || h || d) parts.push(m + "m");
+      parts.push(s + "s");
+      return parts.join(" ");
+    }
+
+    // ---- theme (day/night) ----
+    const root = document.documentElement;
+    function applyTheme(t) {
+      root.setAttribute("data-theme", t);
+      $("theme-toggle").textContent = t === "light" ? "☀️" : "🌙";
+    }
+    (function initTheme() {
+      const saved = localStorage.getItem("dsmrhub-theme");
+      const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
+      applyTheme(saved || (prefersLight ? "light" : "dark"));
+    })();
+    $("theme-toggle").addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+      localStorage.setItem("dsmrhub-theme", next);
+      applyTheme(next);
+    });
+
+    function row(k, v, unit) {
+      return `<div class="row"><span class="k">${k}</span><span class="v">${v}${unit ? `<small>${unit}</small>` : ""}</span></div>`;
+    }
+    function rowMono(k, v) {
+      return `<div class="row"><span class="k">${k}</span><span class="v mono">${v}</span></div>`;
+    }
+
+    function phaseCard(name, p) {
+      p = p || {};
+      return `
+        <div class="card c-phase">
+          <h3><span class="bar"></span>Phase ${name}</h3>
+          ${row("Voltage", fmt(p.voltageV, 1), "V")}
+          ${row("Current", fmt(p.currentA, 1), "A")}
+          ${row("Power delivered", fmt(p.powerDeliveredKw, 3), "kW")}
+          ${row("Power returned", fmt(p.powerReturnedKw, 3), "kW")}
+          ${row("Voltage sags", fmt(p.voltageSags))}
+          ${row("Voltage swells", fmt(p.voltageSwells))}
+        </div>`;
+    }
+
+    function renderCards(d) {
+      const cards = [];
+
+      // Identity
+      cards.push(`
+        <div class="card c-status">
+          <h3><span class="bar"></span>Identity</h3>
+          ${rowMono("Identification", txt(d.identification))}
+          ${rowMono("Meter equipment id", txt(d.electricityEquipmentId))}
+          ${row("DSMR version", txt(d.dsmrVersion))}
+          ${row("Meter timestamp", date(d.meterTimestamp))}
+          ${rowMono("Text message", txt(d.textMessage))}
+        </div>`);
+
+      // Energy
+      cards.push(`
+        <div class="card c-energy">
+          <h3><span class="bar"></span>Energy</h3>
+          ${row("Delivered tariff 1", fmt(d.energyDeliveredTariff1Kwh, 3), "kWh")}
+          ${row("Delivered tariff 2", fmt(d.energyDeliveredTariff2Kwh, 3), "kWh")}
+          ${row("Returned tariff 1", fmt(d.energyReturnedTariff1Kwh, 3), "kWh")}
+          ${row("Returned tariff 2", fmt(d.energyReturnedTariff2Kwh, 3), "kWh")}
+          ${row("Max running month", fmt(d.energyDeliveredMaxRunningMonthKwh, 3), "kW")}
+          ${row("Max running month at", date(d.energyDeliveredMaxRunningMonthTimestamp))}
+        </div>`);
+
+      // Power & status
+      cards.push(`
+        <div class="card c-power">
+          <h3><span class="bar"></span>Power &amp; status</h3>
+          ${row("Power delivered", fmt(d.powerDeliveredKw, 3), "kW")}
+          ${row("Power returned", fmt(d.powerReturnedKw, 3), "kW")}
+          ${row("15-min average", fmt(d.powerDeliveredCurrentAvgKw, 3), "kW")}
+          ${row("Limiter threshold", fmt(d.limiterThresholdKw, 3), "kW")}
+          ${row("Fuse threshold", fmt(d.fuseThresholdA, 1), "A")}
+          ${row("Breaker state", `<span class="badge">${breakerLabel(d.breakerState)}</span>`)}
+          ${row("Power failures", fmt(d.powerFailuresCount))}
+          ${row("Long power failures", fmt(d.longPowerFailuresCount))}
+        </div>`);
+
+      // Phases
+      cards.push(phaseCard("L1", d.phaseL1));
+      cards.push(phaseCard("L2", d.phaseL2));
+      cards.push(phaseCard("L3", d.phaseL3));
+
+      // Gas
+      cards.push(`
+        <div class="card c-gas">
+          <h3><span class="bar"></span>Gas</h3>
+          ${row("Delivered", fmt(d.gasDeliveredM3, 3), "m³")}
+          ${row("Measured at", date(d.gasDeliveredTimestamp))}
+          ${row("Valve", yesno(d.gasValveOpen))}
+          ${rowMono("Equipment id", txt(d.gasEquipmentId))}
+          ${row("Device type", txt(d.gasDeviceType))}
+        </div>`);
+
+      // Water
+      cards.push(`
+        <div class="card c-water">
+          <h3><span class="bar"></span>Water</h3>
+          ${row("Delivered", fmt(d.waterDeliveredM3, 3), "m³")}
+          ${row("Measured at", date(d.waterDeliveredTimestamp))}
+          ${rowMono("Equipment id", txt(d.waterEquipmentId))}
+          ${row("Device type", txt(d.waterDeviceType))}
+        </div>`);
+
+      $("cards").innerHTML = cards.join("");
+    }
+
+    function renderMbus(list) {
+      list = list || [];
+      const wrap = $("mbus-wrap");
+      if (!list.length) { wrap.innerHTML = `<div class="empty">No M-Bus channels reported.</div>`; return; }
+      const rows = list.map(d => `
+        <tr>
+          <td>${fmt(d.channel)}</td>
+          <td>${txt(d.deviceType)}</td>
+          <td class="">${txt(d.equipmentId)}</td>
+          <td>${yesno(d.valveOpen)}</td>
+          <td>${fmt(d.value, 3)}</td>
+          <td>${txt(d.unit)}</td>
+          <td>${date(d.captureTime)}</td>
+        </tr>`).join("");
+      wrap.innerHTML = `<table class="log">
+        <tr><th>Channel</th><th>Type</th><th>Equipment id</th><th>Valve</th><th>Value</th><th>Unit</th><th>Captured</th></tr>
+        ${rows}</table>`;
+    }
+
+    function renderFailures(list) {
+      list = list || [];
+      const wrap = $("failures-wrap");
+      if (!list.length) { wrap.innerHTML = `<div class="empty">No power-failure events reported.</div>`; return; }
+      const rows = list.map(f => `
+        <tr><td>${date(f.endTime)}</td><td>${fmtDuration(f.durationSeconds)}</td></tr>`).join("");
+      wrap.innerHTML = `<table class="log">
+        <tr><th>Power restored</th><th>Duration</th></tr>${rows}</table>`;
+    }
+
+    function renderPeaks(list) {
+      list = list || [];
+      const wrap = $("peaks-wrap");
+      if (!list.length) { wrap.innerHTML = `<div class="empty">No max-demand history reported.</div>`; return; }
+      const rows = list.map(m => `
+        <tr><td>${date(m.periodStart)}</td><td>${date(m.peakOccurredAt)}</td><td>${fmt(m.peakKw, 3)} kW</td></tr>`).join("");
+      wrap.innerHTML = `<table class="log">
+        <tr><th>Period start</th><th>Peak occurred</th><th>Peak</th></tr>${rows}</table>`;
+    }
+
+    function render(d) {
+      $("s-pdel").textContent = fmt(d.powerDeliveredKw, 3);
+      $("s-pret").textContent = fmt(d.powerReturnedKw, 3);
+      $("s-tariff").textContent = tariffLabel(d.tariff);
+      $("s-version").textContent = txt(d.dsmrVersion);
+
+      renderCards(d);
+      renderMbus(d.mBusDevices);
+      renderFailures(d.powerFailureLog);
+      renderPeaks(d.maxDemandHistory);
+
+      const t = new Date(d.timestamp);
+      $("stamp").textContent = "updated " + t.toLocaleTimeString();
+      $("dot-live").className = "dot ok";
+      document.body.classList.remove("disconnected");
+    }
+
+    function connect() {
+      const es = new EventSource("/events");
+      es.onmessage = e => {
+        try { render(JSON.parse(e.data)); } catch (err) { console.error(err); }
+      };
+      es.onopen = () => { document.body.classList.remove("disconnected"); };
+      es.onerror = () => {
+        // EventSource auto-reconnects; reflect the gap in the UI meanwhile.
+        $("dot-live").className = "dot bad";
+        $("stamp").textContent = "reconnecting…";
+        document.body.classList.add("disconnected");
+      };
+    }
+
+    connect();
+  </script>
+</body>
+</html>
