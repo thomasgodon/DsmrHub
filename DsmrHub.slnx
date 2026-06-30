@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DsmrHub.Application/DsmrHub.Application.csproj" />
+    <Project Path="src/DsmrHub.Domain/DsmrHub.Domain.csproj" />
+    <Project Path="src/DsmrHub.Host/DsmrHub.Host.csproj" />
+    <Project Path="src/DsmrHub.Infrastructure/DsmrHub.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DsmrHub.Tests/DsmrHub.Tests.csproj" />
+  </Folder>
+</Solution>
