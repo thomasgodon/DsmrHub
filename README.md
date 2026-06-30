@@ -13,16 +13,14 @@ layer of adapters, and a thin host. Readings are dispatched to the sinks as a do
 
 ```
 DsmrHub.slnx
-├─ src/
-│  ├─ DsmrHub.Domain          Entities, value objects, domain events. No external dependencies
-│  │                          (except MediatR.Contracts for the notification marker).
-│  ├─ DsmrHub.Application      Ports (ITelegramParser, IMeterReadingSource) and the
-│  │                          TelegramIngestionService use case. Depends only on Domain + MediatR.
-│  ├─ DsmrHub.Infrastructure   Adapters: DSMR parser/mapper, serial + simulator sources, and one
-│  │                          MediatR notification handler per sink (MQTT, KNX, IoT Hub, UDP).
-│  └─ DsmrHub.Host             Console worker (composition root): wiring, configuration, Worker.
-└─ tests/
-   └─ DsmrHub.Tests            xUnit tests for value objects, the aggregate, and telegram mapping.
+├─ DsmrHub.Domain          Entities, value objects, domain events. No external dependencies
+│                          (except MediatR.Contracts for the notification marker).
+├─ DsmrHub.Application     Ports (ITelegramParser, IMeterReadingSource) and the
+│                          TelegramIngestionService use case. Depends only on Domain + MediatR.
+├─ DsmrHub.Infrastructure  Adapters: DSMR parser/mapper, serial + simulator sources, and one
+│                          MediatR notification handler per sink (MQTT, KNX, IoT Hub, UDP).
+├─ DsmrHub                 Console worker (composition root): wiring, configuration, Worker.
+└─ DsmrHub.Tests           xUnit tests for value objects, the aggregate, and telegram mapping.
 ```
 
 Dependency direction is enforced by project references: `Domain ← Application ← Infrastructure ← Host`.
@@ -58,7 +56,7 @@ library-agnostic.
 ```pwsh
 dotnet build DsmrHub.slnx
 dotnet test  DsmrHub.slnx
-dotnet run --project src/DsmrHub.Host
+dotnet run --project DsmrHub
 ```
 
 To replay the bundled example telegram stream instead of reading a serial port, set
@@ -66,7 +64,7 @@ To replay the bundled example telegram stream instead of reading a serial port, 
 
 ## Configuration
 
-All configuration lives in `src/DsmrHub.Host/appsettings.json`. Every sink is disabled by default.
+All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by default.
 
 | Section         | Purpose                                                                  |
 |-----------------|--------------------------------------------------------------------------|

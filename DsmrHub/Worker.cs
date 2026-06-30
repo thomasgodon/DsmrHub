@@ -1,7 +1,7 @@
 using DsmrHub.Application.Abstractions;
 using Microsoft.Extensions.Hosting;
 
-namespace DsmrHub.Host;
+namespace DsmrHub;
 
 /// <summary>
 /// Background service that drives the configured meter-reading source for the application's lifetime.

@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "DsmrHub.Host": {
+    "DsmrHub": {
       "commandName": "Project",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"

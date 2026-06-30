@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>DsmrHub.Host</RootNamespace>
+    <RootNamespace>DsmrHub</RootNamespace>
     <UserSecretsId>dotnet-dsmrOpcUa-AE46CD13-A965-4FC8-9D4D-60485C39604E</UserSecretsId>
   </PropertyGroup>
 

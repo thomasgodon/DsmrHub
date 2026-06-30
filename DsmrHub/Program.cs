@@ -1,5 +1,5 @@
+using DsmrHub;
 using DsmrHub.Application;
-using DsmrHub.Host;
 using DsmrHub.Infrastructure;
 
 var builder = Host.CreateApplicationBuilder(args);

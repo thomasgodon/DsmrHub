@@ -14,9 +14,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DsmrHub.Domain\DsmrHub.Domain.csproj" />
-    <ProjectReference Include="..\..\src\DsmrHub.Application\DsmrHub.Application.csproj" />
-    <ProjectReference Include="..\..\src\DsmrHub.Infrastructure\DsmrHub.Infrastructure.csproj" />
+    <ProjectReference Include="..\DsmrHub.Domain\DsmrHub.Domain.csproj" />
+    <ProjectReference Include="..\DsmrHub.Application\DsmrHub.Application.csproj" />
+    <ProjectReference Include="..\DsmrHub.Infrastructure\DsmrHub.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
