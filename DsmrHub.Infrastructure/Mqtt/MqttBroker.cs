@@ -24,7 +24,7 @@ internal sealed class MqttBroker : IMqttBroker
             .WithDefaultEndpoint()
             .WithDefaultEndpointPort(_mqttOptions.Port)
             .Build();
-        _server = new MqttFactory().CreateMqttServer(_serverOptions);
+        _server = new MqttServerFactory().CreateMqttServer(_serverOptions);
         _server.ValidatingConnectionAsync += ValidateConnectionAsyncHandler;
     }
 

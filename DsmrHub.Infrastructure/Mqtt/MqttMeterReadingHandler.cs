@@ -6,7 +6,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MQTTnet;
-using MQTTnet.Client;
 
 namespace DsmrHub.Infrastructure.Mqtt;
 
@@ -27,7 +26,7 @@ internal sealed class MqttMeterReadingHandler : INotificationHandler<MeterReadin
         _mqttBroker = mqttBroker;
         _mqttOptions = mqttOptions.Value;
         _logger = logger;
-        _mqttClient = new MqttFactory().CreateMqttClient();
+        _mqttClient = new MqttClientFactory().CreateMqttClient();
     }
 
     public async Task Handle(MeterReadingReceived notification, CancellationToken cancellationToken)
