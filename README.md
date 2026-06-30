@@ -79,8 +79,13 @@ dotnet test  DsmrHub.slnx
 dotnet run --project DsmrHub
 ```
 
-To replay the bundled example telegram stream instead of reading a serial port, set
-`DsmrOptions:UseExampleTelegram` to `true`.
+To run the built-in synthetic simulator instead of reading a serial port, set
+`DsmrOptions:UseSimulator` to `true`. It generates a continuously-varying telegram for a full
+three-phase meter that exercises **every** value the system can surface — climbing energy/return
+registers, fluctuating per-phase power/voltage/current with sag/swell counters, running-month and
+monthly max-demand history, power-failure counts and event log, breaker/limiter/fuse info, and both
+gas and water M-Bus devices. It flows through the same pipeline to every sink and the dashboard, so no
+meter hardware is required.
 
 ## Running with Docker
 
@@ -109,13 +114,13 @@ docker run -d --name dsmrhub --device=/dev/ttyUSB0 `
   -e DsmrOptions__ComPort=/dev/ttyUSB0 -p 8080:8080 `
   ghcr.io/thomasgodon/dsmrhub:latest
 
-# No hardware: replay the bundled example telegram
-docker run --rm -e DsmrOptions__UseExampleTelegram=true -p 8080:8080 `
+# No hardware: run the built-in synthetic simulator
+docker run --rm -e DsmrOptions__UseSimulator=true -p 8080:8080 `
   ghcr.io/thomasgodon/dsmrhub:latest
 ```
 
 Note: serial port reads require a Linux host with the P1 USB cable attached — Docker `--device`
-passthrough is not available on Docker Desktop for Windows/macOS, so use `UseExampleTelegram`
+passthrough is not available on Docker Desktop for Windows/macOS, so use `UseSimulator`
 (or the UDP source) when running there.
 
 ## Releases
@@ -139,7 +144,7 @@ All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by
 
 | Section            | Purpose                                                               |
 |--------------------|-----------------------------------------------------------------------|
-| `DsmrOptions`   | Serial port (`ComPort`, `BaudRate`, `Parity`, `StopBits`, `DataBits`, `ReceiveTimeout`) and simulator (`UseExampleTelegram`, `SimulationRateInSeconds`). |
+| `DsmrOptions`   | Serial port (`ComPort`, `BaudRate`, `Parity`, `StopBits`, `DataBits`, `ReceiveTimeout`) and simulator (`UseSimulator`, `SimulationRateInSeconds`). |
 | `DashboardOptions` | `Enabled` (bind the web dashboard, default `true`) and `Port` (default `8080`). |
 | `MqttOptions`   | `Enabled`, `Port`, `Username`, `Password` for the embedded broker.       |
 | `UdpOptions`    | `Enabled`, `Host`. Values are broadcast to fixed ports 10000–10033.      |

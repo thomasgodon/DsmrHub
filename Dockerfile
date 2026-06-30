@@ -34,6 +34,6 @@ EXPOSE 8080
 # Supply real config via environment variables. The P1 meter is read from a serial port, so on Linux
 # point ComPort at the passed-through device and run with `--device`, e.g.
 #   docker run --device=/dev/ttyUSB0 -e DsmrOptions__ComPort=/dev/ttyUSB0 -p 8080:8080 dsmrhub
-# To smoke-test without hardware, replay the bundled telegram:
-#   docker run -e DsmrOptions__UseExampleTelegram=true -p 8080:8080 dsmrhub
+# To smoke-test without hardware, run the built-in synthetic simulator:
+#   docker run -e DsmrOptions__UseSimulator=true -p 8080:8080 dsmrhub
 ENTRYPOINT ["dotnet", "DsmrHub.dll"]

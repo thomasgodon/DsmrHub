@@ -19,8 +19,8 @@ services:
       # --- DSMR serial source ---
       DsmrOptions__ComPort: "/dev/ttyUSB0"
       # DsmrOptions__BaudRate: "115200"
-      # Replay the bundled example telegram instead of reading the serial port (no hardware needed):
-      # DsmrOptions__UseExampleTelegram: "true"
+      # Generate a synthetic DSMR stream instead of reading the serial port (no hardware needed):
+      # DsmrOptions__UseSimulator: "true"
 
       # --- Dashboard ---
       # DashboardOptions__Enabled: "true"

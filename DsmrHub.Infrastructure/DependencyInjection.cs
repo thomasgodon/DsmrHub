@@ -36,7 +36,7 @@ public static class DependencyInjection
         services.AddSingleton<IMeterReadingSource>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<DsmrOptions>>().Value;
-            return options.UseExampleTelegram
+            return options.UseSimulator
                 ? ActivatorUtilities.CreateInstance<SimulatedMeterReadingSource>(sp)
                 : ActivatorUtilities.CreateInstance<SerialMeterReadingSource>(sp);
         });

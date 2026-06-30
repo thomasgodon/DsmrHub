@@ -3,7 +3,7 @@ namespace DsmrHub.Infrastructure.Options;
 public sealed class DsmrOptions
 {
     public string ComPort { get; init; } = null!;
-    public bool UseExampleTelegram { get; init; }
+    public bool UseSimulator { get; init; }
     public int? SimulationRateInSeconds { get; init; }
     public int BaudRate { get; init; }
     public int Parity { get; init; }
