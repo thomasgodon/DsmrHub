@@ -69,9 +69,28 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
             .Where(m => m is not null)
             .ToList();
 
-        foreach (var updatedValue in updatedValues)
+        for (var i = 0; i < updatedValues.Count; i++)
         {
-            await WriteGroupValueAsync(updatedValue!, cancellationToken);
+            try
+            {
+                await WriteGroupValueAsync(updatedValues[i]!, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Values are cached as "sent" before the write. Forget the ones that did not go out, so
+                // the next telegram sends them again; otherwise a rarely-changing value (tariff, gas valve)
+                // would stay stale on the bus until it changes.
+                lock (_telegramsLock)
+                {
+                    foreach (var unsent in updatedValues.Skip(i))
+                    {
+                        unsent!.Value = null;
+                    }
+                }
+
+                _logger.LogWarning(ex, "KNX write failed, {count} value(s) will be resent with the next telegram", updatedValues.Count - i);
+                return;
+            }
         }
     }
 
@@ -80,6 +99,11 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
         if (_knxBus?.ConnectionState == BusConnectionState.Connected)
         {
             return;
+        }
+
+        if (_knxBus is not null)
+        {
+            await _knxBus.DisposeAsync();
         }
 
         _knxBus = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
