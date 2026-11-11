@@ -10,8 +10,9 @@ namespace DsmrHub.Infrastructure.Dsmr;
 
 /// <summary>
 /// Reads raw DSMR telegrams from a serial port and forwards them to the ingestion use case.
-/// Ported verbatim from the original <c>DsmrClient</c> to preserve hardware behavior
-/// (event-based receive, buffering queue, receive-timeout reconnect loop).
+/// Keeps the hardware behavior of the original <c>DsmrClient</c> (event-based receive, buffering
+/// queue, receive-timeout reconnect loop) and reassembles the received chunks into complete
+/// telegrams with <see cref="TelegramFramer"/> before ingesting them.
 /// </summary>
 internal sealed class SerialMeterReadingSource : IMeterReadingSource
 {
@@ -20,6 +21,7 @@ internal sealed class SerialMeterReadingSource : IMeterReadingSource
     private readonly DsmrOptions _options;
     private readonly ITelegramIngestionService _ingestionService;
     private readonly Queue<string> _queue = new();
+    private readonly TelegramFramer _framer = new();
     private readonly object _queueLock = new();
     private readonly Stopwatch _receiveTimeoutTimer = new();
     private readonly Stopwatch _lastReceivedTimeTimer = new();
@@ -77,7 +79,8 @@ internal sealed class SerialMeterReadingSource : IMeterReadingSource
 
     private async Task ProcessReceivedData(CancellationToken cancellationToken)
     {
-        var buffer = new StringBuilder();
+        var chunk = new StringBuilder();
+        _framer.Reset();
         _receiveTimeoutTimer.Restart();
         while (cancellationToken.IsCancellationRequested is false && _serialPort.IsOpen)
         {
@@ -107,15 +110,22 @@ internal sealed class SerialMeterReadingSource : IMeterReadingSource
 
                 while (_queue.Count > 0)
                 {
-                    buffer.Append(_queue.Dequeue());
+                    chunk.Append(_queue.Dequeue());
                 }
             }
 
-            _lastReceivedTime = DateTime.Now;
             _receiveTimeoutTimer.Restart();
-            _logger.LogTrace("{buffer}", buffer.ToString());
-            await _ingestionService.IngestAsync(buffer.ToString(), cancellationToken);
-            buffer.Clear();
+
+            // A telegram regularly spans several reads, so only complete ones are ingested.
+            var telegrams = _framer.Append(chunk.ToString());
+            chunk.Clear();
+
+            foreach (var telegram in telegrams)
+            {
+                _lastReceivedTime = DateTime.Now;
+                _logger.LogTrace("{telegram}", telegram);
+                await _ingestionService.IngestAsync(telegram, cancellationToken);
+            }
         }
 
         if (_serialPort.IsOpen is false)

@@ -1,12 +1,20 @@
 name: Docker Publish
 
+# Every commit on main publishes :unstable; a release (vX.Y.Z tag) publishes the version tags
+# and moves :latest. Nothing is built or pushed unless the integration tests pass first.
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
 jobs:
+  integration-tests:
+    uses: ./.github/workflows/integration-tests.yml
+
   build-and-push:
+    needs: integration-tests
     runs-on: ubuntu-latest
 
     permissions:
@@ -32,7 +40,8 @@ jobs:
         tags: |
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
-          type=raw,value=latest
+          type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          type=raw,value=unstable,enable=${{ github.ref == 'refs/heads/main' }}
 
     - name: Build and push image
       uses: docker/build-push-action@v6

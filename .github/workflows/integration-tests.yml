@@ -1,12 +1,12 @@
 name: Integration Tests
 
+# Runs on PRs, and is called by the Docker Publish workflow (pushes to main and release tags),
+# which only publishes an image once these tests pass.
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+  workflow_call:
 
 jobs:
   build:

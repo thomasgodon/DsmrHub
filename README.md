@@ -125,18 +125,26 @@ passthrough is not available on Docker Desktop for Windows/macOS, so use `UseSim
 
 ## Releases
 
-Pushing a `vX.Y.Z` tag triggers the **Docker Publish** workflow
-(`.github/workflows/docker-publish.yml`), which builds the image and pushes it to
-`ghcr.io/thomasgodon/dsmrhub` tagged with the full version, `major.minor`, and `latest`:
+The **Docker Publish** workflow (`.github/workflows/docker-publish.yml`) builds the image and
+pushes it to `ghcr.io/thomasgodon/dsmrhub`:
+
+| Trigger                                   | Tags published                              |
+|-------------------------------------------|---------------------------------------------|
+| Every commit on `main`                    | `unstable`                                  |
+| A release, i.e. a pushed `vX.Y.Z` tag     | full version, `major.minor`, and `latest`   |
+
+`latest` therefore always points at the newest release; use `unstable` to run the current
+state of `main`. Create a release from the GitHub UI (with a new `vX.Y.Z` tag) or push the tag:
 
 ```pwsh
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Pushes and PRs to `main` run the **Integration Tests** workflow
-(`.github/workflows/integration-tests.yml`): restore, build, and `dotnet test` against
-`DsmrHub.slnx`, with test results uploaded as an artifact.
+The **Integration Tests** workflow (`.github/workflows/integration-tests.yml`) restores, builds
+and runs `dotnet test` against `DsmrHub.slnx`, with test results uploaded as an artifact. It runs
+on PRs to `main`, and Docker Publish calls it first on every push to `main` and every release
+tag: the image is only built and pushed when the tests pass.
 
 ## Configuration
 
