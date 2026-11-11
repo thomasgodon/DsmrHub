@@ -19,7 +19,7 @@ namespace DsmrHub.Infrastructure.Knx;
 /// <c>GroupAddressMapping</c> configuration keeps working. The running-month peak is a power and is
 /// sent as a W float under the <c>PowerDeliveredMaxRunningMonth</c> key.
 /// </summary>
-internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReadingReceived>
+internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReadingReceived>, IAsyncDisposable
 {
     // Capability keys must match the keys used in KnxOptions.GroupAddressMapping (appsettings.json).
     private const string ElectricityTariffKey = "ElectricityTariff";
@@ -91,6 +91,30 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
                 _logger.LogWarning(ex, "KNX write failed, {count} value(s) will be resent with the next telegram", updatedValues.Count - i);
                 return;
             }
+        }
+    }
+
+    /// <summary>
+    /// Closes the tunnel on shutdown (the DI container disposes this singleton when the host stops).
+    /// Without an explicit disconnect the IP interface keeps the tunnel slot until it times out, and a
+    /// freshly started container is refused with "no more connections available".
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+        if (_knxBus is null) return;
+
+        try
+        {
+            await _knxBus.DisposeAsync();
+            _logger.LogInformation("Disconnected from {host}", _knxOptions.Host);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error while disconnecting from {host}", _knxOptions.Host);
+        }
+        finally
+        {
+            _knxBus = null;
         }
     }
 
