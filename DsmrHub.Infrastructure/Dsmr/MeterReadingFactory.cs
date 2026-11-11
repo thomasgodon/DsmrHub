@@ -41,10 +41,9 @@ internal static class MeterReadingFactory
             EnergyDeliveredTariff2: Energy(t.Value("1-0:1.8.2")),
             EnergyReturnedTariff1: Energy(t.Value("1-0:2.8.1")),
             EnergyReturnedTariff2: Energy(t.Value("1-0:2.8.2")),
-            // Preserves the existing field semantics: 1-0:1.6.0 reports a kW peak, surfaced here
-            // as the running-month value (kept as-is so existing KNX/MQTT sinks are unaffected).
-            EnergyDeliveredMaxRunningMonth: Energy(runningMonth.Count > 1 ? runningMonth[1] : null),
-            EnergyDeliveredMaxRunningMonthTimestamp: ObisValueParser.Timestamp(runningMonth.Count > 0 ? runningMonth[0] : null),
+            // 1-0:1.6.0 = (timestamp)(peak*kW): the running-month peak quarter-hourly demand.
+            PowerDeliveredMaxRunningMonth: Power(runningMonth.Count > 1 ? runningMonth[1] : null),
+            PowerDeliveredMaxRunningMonthTimestamp: ObisValueParser.Timestamp(runningMonth.Count > 0 ? runningMonth[0] : null),
             PowerDelivered: Power(t.Value("1-0:1.7.0")),
             PowerReturned: Power(t.Value("1-0:2.7.0")),
             PowerDeliveredCurrentAvg: Power(t.Value("1-0:1.4.0")),

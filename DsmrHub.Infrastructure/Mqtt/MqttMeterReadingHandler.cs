@@ -76,7 +76,7 @@ internal sealed class MqttMeterReadingHandler : INotificationHandler<MeterReadin
         foreach (var m in Energy("electricity/energy-delivered-tariff2", e.EnergyDeliveredTariff2)) yield return m;
         foreach (var m in Energy("electricity/energy-returned-tariff1", e.EnergyReturnedTariff1)) yield return m;
         foreach (var m in Energy("electricity/energy-returned-tariff2", e.EnergyReturnedTariff2)) yield return m;
-        foreach (var m in Energy("electricity/energy-delivered-max-running-month", e.EnergyDeliveredMaxRunningMonth)) yield return m;
+        if (e.PowerDeliveredMaxRunningMonth is { } pmax) yield return ("electricity/power-delivered-max-running-month", Format(pmax.Kilowatts));
 
         if (e.PowerDelivered is { } pd) yield return ("electricity/power-delivered", Format(pd.Kilowatts));
         if (e.PowerReturned is { } pr) yield return ("electricity/power-returned", Format(pr.Kilowatts));

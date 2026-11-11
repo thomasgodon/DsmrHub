@@ -44,8 +44,8 @@ public class SyntheticTelegramGeneratorTests
         Assert.NotNull(e.EnergyDeliveredTariff2);
         Assert.NotNull(e.EnergyReturnedTariff1);
         Assert.NotNull(e.EnergyReturnedTariff2);
-        Assert.NotNull(e.EnergyDeliveredMaxRunningMonth);
-        Assert.NotNull(e.EnergyDeliveredMaxRunningMonthTimestamp);
+        Assert.NotNull(e.PowerDeliveredMaxRunningMonth);
+        Assert.NotNull(e.PowerDeliveredMaxRunningMonthTimestamp);
         Assert.NotNull(e.PowerDelivered);
         Assert.NotNull(e.PowerReturned);
         Assert.NotNull(e.PowerDeliveredCurrentAvg);

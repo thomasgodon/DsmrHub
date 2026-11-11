@@ -15,8 +15,9 @@ namespace DsmrHub.Infrastructure.Knx;
 /// <summary>
 /// Writes meter values onto a KNX bus over IP tunneling and answers KNX read requests.
 /// Ported from the original <c>KnxProcessor</c>: the capability keys, byte encodings, scale
-/// factors (kW->W, kWh, running-month *1000) and read-response behavior are preserved so existing
-/// <c>GroupAddressMapping</c> configuration keeps working.
+/// factors (kW->W, kWh) and read-response behavior are preserved so existing
+/// <c>GroupAddressMapping</c> configuration keeps working. The running-month peak is a power and is
+/// sent as a W float under the <c>PowerDeliveredMaxRunningMonth</c> key.
 /// </summary>
 internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReadingReceived>
 {
@@ -43,7 +44,7 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
     private const string VoltageL3Key = "VoltageL3";
     private const string GasDeliveredKey = "GasDelivered";
     private const string GasValvePositionKey = "GasValvePosition";
-    private const string EnergyDeliveredMaxRunningMonthKey = "EnergyDeliveredMaxRunningMonth";
+    private const string PowerDeliveredMaxRunningMonthKey = "PowerDeliveredMaxRunningMonth";
 
     private readonly ILogger<KnxMeterReadingHandler> _logger;
     private readonly KnxOptions _knxOptions;
@@ -168,10 +169,8 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
                 ? UpdateValue(GasValvePositionKey, BitConverter.GetBytes(g.ValvePosition == 1))
                 : null;
 
-            // Energy delivered max running month - 13.010 (Wh as uint)
-            yield return e.EnergyDeliveredMaxRunningMonth is { } maxMonth
-                ? UpdateValue(EnergyDeliveredMaxRunningMonthKey, BitConverter.GetBytes((uint)(maxMonth.KilowattHours * 1000)))
-                : null;
+            // Power delivered max running month - 14.056 (W, like the other power values)
+            yield return Float(PowerDeliveredMaxRunningMonthKey, e.PowerDeliveredMaxRunningMonth?.Watts);
         }
     }
 

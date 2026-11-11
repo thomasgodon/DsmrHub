@@ -123,8 +123,8 @@ public class TelegramMappingTests
     {
         var e = Map().Electricity;
         // 1-0:1.6.0 surfaces the running-month peak value with its capture timestamp.
-        Assert.Equal(3.716m, e.EnergyDeliveredMaxRunningMonth!.Value.KilowattHours);
-        Assert.Equal(new DateTimeOffset(2022, 12, 3, 17, 45, 0, TimeSpan.FromHours(1)), e.EnergyDeliveredMaxRunningMonthTimestamp);
+        Assert.Equal(3.716m, e.PowerDeliveredMaxRunningMonth!.Value.Kilowatts);
+        Assert.Equal(new DateTimeOffset(2022, 12, 3, 17, 45, 0, TimeSpan.FromHours(1)), e.PowerDeliveredMaxRunningMonthTimestamp);
     }
 
     [Fact]

@@ -167,7 +167,8 @@ All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by
   `10033` = gas delivered in m3). Every port is sent on each reading; absent values send an empty payload.
 - **KNX** `GroupAddressMapping` keys must match the capability names (`PowerDelivered`,
   `EnergyDeliveredTariff1`, `GasDelivered`, …). Byte encodings and scale factors match the bus
-  expectations (power in W, energy in kWh, running-month max as a `uint`).
+  expectations (power in W, energy in kWh). The running-month peak (`1-0:1.6.0`) is a power: KNX key
+  `PowerDeliveredMaxRunningMonth` (W float), MQTT `dsmr/electricity/power-delivered-max-running-month` (kW).
 - **IoT Hub** serializes the `MeterReading` to JSON with `System.Text.Json`.
 
 ## Known warnings

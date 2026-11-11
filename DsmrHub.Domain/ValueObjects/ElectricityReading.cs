@@ -9,8 +9,9 @@ public sealed record ElectricityReading(
     EnergyValue? EnergyDeliveredTariff2,
     EnergyValue? EnergyReturnedTariff1,
     EnergyValue? EnergyReturnedTariff2,
-    EnergyValue? EnergyDeliveredMaxRunningMonth,
-    DateTimeOffset? EnergyDeliveredMaxRunningMonthTimestamp,
+    // Running-month peak quarter-hourly average demand (OBIS 1-0:1.6.0), a power in kW.
+    PowerValue? PowerDeliveredMaxRunningMonth,
+    DateTimeOffset? PowerDeliveredMaxRunningMonthTimestamp,
     PowerValue? PowerDelivered,
     PowerValue? PowerReturned,
     PowerValue? PowerDeliveredCurrentAvg,

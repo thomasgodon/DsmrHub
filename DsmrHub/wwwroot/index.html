@@ -306,8 +306,8 @@
           ${row("Delivered tariff 2", fmt(d.energyDeliveredTariff2Kwh, 3), "kWh")}
           ${row("Returned tariff 1", fmt(d.energyReturnedTariff1Kwh, 3), "kWh")}
           ${row("Returned tariff 2", fmt(d.energyReturnedTariff2Kwh, 3), "kWh")}
-          ${row("Max running month", fmt(d.energyDeliveredMaxRunningMonthKwh, 3), "kW")}
-          ${row("Max running month at", date(d.energyDeliveredMaxRunningMonthTimestamp))}
+          ${row("Max running month", fmt(d.powerDeliveredMaxRunningMonthKw, 3), "kW")}
+          ${row("Max running month at", date(d.powerDeliveredMaxRunningMonthTimestamp))}
         </div>`);
 
       // Power & status
