@@ -90,8 +90,23 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
 
         _logger.LogInformation("Connecting to {host}", _knxOptions.Host);
         await _knxBus.ConnectAsync(cancellationToken);
-        await _knxBus.SetInterfaceConfigurationAsync(new BusInterfaceConfiguration(IndividualAddress.Parse(_knxOptions.IndividualAddress)), cancellationToken);
-        _logger.LogInformation("Connected to {host}", _knxOptions.Host);
+
+        // Over IP tunneling the interface assigns each tunnel its own individual address, so overriding
+        // it is optional. Requesting one that another tunnel already holds fails; that must not stop
+        // the bridge, the tunnel's assigned address works fine.
+        if (string.IsNullOrWhiteSpace(_knxOptions.IndividualAddress) is false)
+        {
+            try
+            {
+                await _knxBus.SetInterfaceConfigurationAsync(new BusInterfaceConfiguration(IndividualAddress.Parse(_knxOptions.IndividualAddress)), cancellationToken);
+            }
+            catch (ConnectorException ex)
+            {
+                _logger.LogWarning("Could not set individual address {address}, using the tunnel-assigned address instead: {message}", _knxOptions.IndividualAddress, ex.Message);
+            }
+        }
+
+        _logger.LogInformation("Connected to {host} as {address}", _knxOptions.Host, _knxBus.InterfaceConfiguration.IndividualAddress);
     }
 
     private async Task ProcessGroupMessageReceivedAsync(GroupEventArgs e, CancellationToken cancellationToken)
@@ -127,7 +142,7 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
         {
             // Electricity tariff - 1.024
             yield return e.Tariff != ElectricityTariff.Unknown
-                ? UpdateValue(ElectricityTariffKey, BitConverter.GetBytes(e.Tariff == ElectricityTariff.Tariff1))
+                ? Bit(ElectricityTariffKey, e.Tariff == ElectricityTariff.Tariff1)
                 : null;
 
             // Energy delivered - 14.*
@@ -166,7 +181,7 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
 
             // Gas valve position - 1.001
             yield return g.ValvePosition is not null
-                ? UpdateValue(GasValvePositionKey, BitConverter.GetBytes(g.ValvePosition == 1))
+                ? Bit(GasValvePositionKey, g.ValvePosition == 1)
                 : null;
 
             // Power delivered max running month - 14.056 (W, like the other power values)
@@ -177,12 +192,18 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
     private KnxTelegramValue? Float(string capability, decimal? value)
         => value is null ? null : UpdateValue(capability, BitConverter.GetBytes((float)value.Value));
 
-    private KnxTelegramValue? UpdateValue(string capability, byte[] value)
+    // 1-bit datapoint (DPT 1.xxx), sent as DPTBinary.
+    private KnxTelegramValue? Bit(string capability, bool value)
+        => UpdateValue(capability, BitConverter.GetBytes(value), isBit: true);
+
+    private KnxTelegramValue? UpdateValue(string capability, byte[] value, bool isBit = false)
     {
         if (_telegrams.TryGetValue(capability, out var knxTelegram) is false)
         {
             return null;
         }
+
+        knxTelegram.IsBit = isBit;
 
         if (knxTelegram.Value is not null && knxTelegram.Value.SequenceEqual(value))
         {
@@ -211,7 +232,7 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
             return;
         }
 
-        var groupValue = new GroupValue(value.Value.Reverse().ToArray());
+        var groupValue = value.ToGroupValue()!;
         await _knxBus.RespondGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
     }
 
@@ -233,7 +254,7 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
             return;
         }
 
-        var groupValue = new GroupValue(value.Value.Reverse().ToArray());
+        var groupValue = value.ToGroupValue()!;
         var writeCancellationToken = new CancellationTokenSource();
 
         // TODO: retry

@@ -157,7 +157,7 @@ All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by
 | `MqttOptions`   | `Enabled`, `Port`, `Username`, `Password` for the embedded broker.       |
 | `UdpOptions`    | `Enabled`, `Host`. Values are broadcast to fixed ports 10000–10033.      |
 | `IotHubOptions` | `IotDevices[]` — DPS-provisioned devices (`IdScope`, `DeviceId`, keys, `ProvisioningUri`, `SendInterval`). The reading is sent as JSON. |
-| `KnxOptions`    | `Enabled`, `Host`, `Port`, `IndividualAddress` (e.g. `"1.1.1"`), and `GroupAddressMapping` (capability → KNX group address). |
+| `KnxOptions`    | `Enabled`, `Host`, `Port`, optional `IndividualAddress` (e.g. `"1.1.1"`; leave empty to use the address the IP interface assigns to the tunnel), and `GroupAddressMapping` (capability → KNX group address). |
 
 ### Sink notes
 
@@ -169,6 +169,8 @@ All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by
   `EnergyDeliveredTariff1`, `GasDelivered`, …). Byte encodings and scale factors match the bus
   expectations (power in W, energy in kWh). The running-month peak (`1-0:1.6.0`) is a power: KNX key
   `PowerDeliveredMaxRunningMonth` (W float), MQTT `dsmr/electricity/power-delivered-max-running-month` (kW).
+  `ElectricityTariff` (DPT 1.024, 1 = tariff 1) and `GasValvePosition` (DPT 1.001) are sent as 1-bit values.
+  A requested `IndividualAddress` already held by another tunnel is logged as a warning and ignored.
 - **IoT Hub** serializes the `MeterReading` to JSON with `System.Text.Json`.
 
 ## Known warnings

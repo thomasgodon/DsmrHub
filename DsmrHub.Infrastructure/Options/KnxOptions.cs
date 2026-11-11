@@ -7,8 +7,8 @@ public sealed class KnxOptions
     public int Port { get; set; }
 
     /// <summary>
-    /// KNX individual address (e.g. "1.1.1"), kept as a string so that an empty/unset value
-    /// (KNX disabled) does not fail options binding. Parsed lazily when connecting.
+    /// Optional KNX individual address (e.g. "1.1.1"), kept as a string so that an empty/unset value
+    /// does not fail options binding. Empty = keep the address the IP interface assigns to the tunnel.
     /// </summary>
     public string IndividualAddress { get; set; } = default!;
 
