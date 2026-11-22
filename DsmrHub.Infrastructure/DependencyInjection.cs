@@ -46,6 +46,9 @@ public static class DependencyInjection
         services.AddSingleton<IIotHubDevicesService, IotHubDevicesService>();
 
         services.AddSingleton<INotificationHandler<MeterReadingReceived>, MqttMeterReadingHandler>();
+        // KNX: the handler only queues values; the publisher writes them on its own background loop.
+        services.AddSingleton<KnxBusPublisher>();
+        services.AddHostedService(sp => sp.GetRequiredService<KnxBusPublisher>());
         services.AddSingleton<INotificationHandler<MeterReadingReceived>, KnxMeterReadingHandler>();
         services.AddSingleton<INotificationHandler<MeterReadingReceived>, IotHubMeterReadingHandler>();
         services.AddTransient<INotificationHandler<MeterReadingReceived>, UdpMeterReadingHandler>();

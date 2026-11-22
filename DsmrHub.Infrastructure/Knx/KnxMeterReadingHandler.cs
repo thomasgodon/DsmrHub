@@ -1,25 +1,19 @@
-using DsmrHub.Domain;
 using DsmrHub.Domain.Events;
 using DsmrHub.Domain.ValueObjects;
-using DsmrHub.Infrastructure.Options;
-using Knx.Falcon;
-using Knx.Falcon.Configuration;
-using Knx.Falcon.Sdk;
 using MediatR;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using static System.Threading.Tasks.Task;
 
 namespace DsmrHub.Infrastructure.Knx;
 
 /// <summary>
-/// Writes meter values onto a KNX bus over IP tunneling and answers KNX read requests.
-/// Ported from the original <c>KnxProcessor</c>: the capability keys, byte encodings, scale
-/// factors (kW->W, kWh) and read-response behavior are preserved so existing
-/// <c>GroupAddressMapping</c> configuration keeps working. The running-month peak is a power and is
-/// sent as a W float under the <c>PowerDeliveredMaxRunningMonth</c> key.
+/// Maps a meter reading onto KNX capability values and hands them to <see cref="KnxBusPublisher"/>,
+/// which writes them on its own background loop. This handler never touches the bus, so a slow or
+/// stuck KNX tunnel cannot delay the serial ingestion or the other sinks.
+/// Ported from the original <c>KnxProcessor</c>: the capability keys, byte encodings and scale
+/// factors (kW->W, kWh) are preserved so existing <c>GroupAddressMapping</c> configuration keeps
+/// working. The running-month peak is a power and is sent as a W float under the
+/// <c>PowerDeliveredMaxRunningMonth</c> key.
 /// </summary>
-internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReadingReceived>, IAsyncDisposable
+internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReadingReceived>
 {
     // Capability keys must match the keys used in KnxOptions.GroupAddressMapping (appsettings.json).
     private const string ElectricityTariffKey = "ElectricityTariff";
@@ -46,292 +40,71 @@ internal sealed class KnxMeterReadingHandler : INotificationHandler<MeterReading
     private const string GasValvePositionKey = "GasValvePosition";
     private const string PowerDeliveredMaxRunningMonthKey = "PowerDeliveredMaxRunningMonth";
 
-    private readonly ILogger<KnxMeterReadingHandler> _logger;
-    private readonly KnxOptions _knxOptions;
-    private readonly Dictionary<string, KnxTelegramValue> _telegrams;
-    private readonly Dictionary<GroupAddress, string> _capabilityAddressMapping;
-    private readonly object _telegramsLock = new();
-    private KnxBus? _knxBus;
+    private readonly KnxBusPublisher _publisher;
 
-    public KnxMeterReadingHandler(ILogger<KnxMeterReadingHandler> logger, IOptions<KnxOptions> knxOptions)
+    public KnxMeterReadingHandler(KnxBusPublisher publisher)
     {
-        _logger = logger;
-        _knxOptions = knxOptions.Value;
-        _telegrams = BuildTelegrams(_knxOptions);
-        _capabilityAddressMapping = BuildCapabilityAddressMapping(_knxOptions);
+        _publisher = publisher;
     }
 
-    public async Task Handle(MeterReadingReceived notification, CancellationToken cancellationToken)
+    public Task Handle(MeterReadingReceived notification, CancellationToken cancellationToken)
     {
-        if (_knxOptions.Enabled is false) return;
+        var e = notification.Reading.Electricity;
+        var g = notification.Reading.Gas;
 
-        var updatedValues = UpdateValues(notification.Reading)
-            .Where(m => m is not null)
-            .ToList();
+        // Electricity tariff - 1.024
+        if (e.Tariff != ElectricityTariff.Unknown) Bit(ElectricityTariffKey, e.Tariff == ElectricityTariff.Tariff1);
 
-        for (var i = 0; i < updatedValues.Count; i++)
-        {
-            try
-            {
-                await WriteGroupValueAsync(updatedValues[i]!, cancellationToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // Values are cached as "sent" before the write. Forget the ones that did not go out, so
-                // the next telegram sends them again; otherwise a rarely-changing value (tariff, gas valve)
-                // would stay stale on the bus until it changes.
-                lock (_telegramsLock)
-                {
-                    foreach (var unsent in updatedValues.Skip(i))
-                    {
-                        unsent!.Value = null;
-                    }
-                }
+        // Energy delivered - 14.*
+        Float(EnergyDeliveredTariff1Key, e.EnergyDeliveredTariff1?.KilowattHours);
+        Float(EnergyDeliveredTariff2Key, e.EnergyDeliveredTariff2?.KilowattHours);
 
-                _logger.LogWarning(ex, "KNX write failed, {count} value(s) will be resent with the next telegram", updatedValues.Count - i);
-                return;
-            }
-        }
+        // Energy returned - 14.*
+        Float(EnergyReturnedTariff1Key, e.EnergyReturnedTariff1?.KilowattHours);
+        Float(EnergyReturnedTariff2Key, e.EnergyReturnedTariff2?.KilowattHours);
+
+        // Power delivered - 14.056 (W)
+        Float(PowerDeliveredKey, e.PowerDelivered?.Watts);
+        Float(PowerDeliveredL1Key, e.PhaseL1.PowerDelivered?.Watts);
+        Float(PowerDeliveredL2Key, e.PhaseL2.PowerDelivered?.Watts);
+        Float(PowerDeliveredL3Key, e.PhaseL3.PowerDelivered?.Watts);
+        Float(PowerDeliveredCurrentAvgKey, e.PowerDeliveredCurrentAvg?.Watts);
+
+        // Power returned - 14.056 (W)
+        Float(PowerReturnedKey, e.PowerReturned?.Watts);
+        Float(PowerReturnedL1Key, e.PhaseL1.PowerReturned?.Watts);
+        Float(PowerReturnedL2Key, e.PhaseL2.PowerReturned?.Watts);
+        Float(PowerReturnedL3Key, e.PhaseL3.PowerReturned?.Watts);
+
+        // Current amperage - 14.019
+        Float(CurrentL1Key, e.PhaseL1.Current?.Amperes);
+        Float(CurrentL2Key, e.PhaseL2.Current?.Amperes);
+        Float(CurrentL3Key, e.PhaseL3.Current?.Amperes);
+
+        // Current voltage - 14.027
+        Float(VoltageL1Key, e.PhaseL1.Voltage?.Volts);
+        Float(VoltageL2Key, e.PhaseL2.Voltage?.Volts);
+        Float(VoltageL3Key, e.PhaseL3.Voltage?.Volts);
+
+        // Gas - 14.076
+        Float(GasDeliveredKey, g.Delivered?.CubicMeters);
+
+        // Gas valve position - 1.001
+        if (g.ValvePosition is not null) Bit(GasValvePositionKey, g.ValvePosition == 1);
+
+        // Power delivered max running month - 14.056 (W, like the other power values)
+        Float(PowerDeliveredMaxRunningMonthKey, e.PowerDeliveredMaxRunningMonth?.Watts);
+
+        return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Closes the tunnel on shutdown (the DI container disposes this singleton when the host stops).
-    /// Without an explicit disconnect the IP interface keeps the tunnel slot until it times out, and a
-    /// freshly started container is refused with "no more connections available".
-    /// </summary>
-    public async ValueTask DisposeAsync()
+    private void Float(string capability, decimal? value)
     {
-        if (_knxBus is null) return;
-
-        try
-        {
-            await _knxBus.DisposeAsync();
-            _logger.LogInformation("Disconnected from {host}", _knxOptions.Host);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error while disconnecting from {host}", _knxOptions.Host);
-        }
-        finally
-        {
-            _knxBus = null;
-        }
+        if (value is null) return;
+        _publisher.Enqueue(capability, BitConverter.GetBytes((float)value.Value), isBit: false);
     }
-
-    private async Task ConnectAsync(CancellationToken cancellationToken)
-    {
-        if (_knxBus?.ConnectionState == BusConnectionState.Connected)
-        {
-            return;
-        }
-
-        if (_knxBus is not null)
-        {
-            await _knxBus.DisposeAsync();
-        }
-
-        _knxBus = new KnxBus(new IpTunnelingConnectorParameters(_knxOptions.Host, _knxOptions.Port));
-        _knxBus.GroupMessageReceived += async (_, args) =>
-        {
-            await ProcessGroupMessageReceivedAsync(args, cancellationToken);
-        };
-
-        _logger.LogInformation("Connecting to {host}", _knxOptions.Host);
-        await _knxBus.ConnectAsync(cancellationToken);
-
-        // Over IP tunneling the interface assigns each tunnel its own individual address, so overriding
-        // it is optional. Requesting one that another tunnel already holds fails; that must not stop
-        // the bridge, the tunnel's assigned address works fine.
-        if (string.IsNullOrWhiteSpace(_knxOptions.IndividualAddress) is false)
-        {
-            try
-            {
-                await _knxBus.SetInterfaceConfigurationAsync(new BusInterfaceConfiguration(IndividualAddress.Parse(_knxOptions.IndividualAddress)), cancellationToken);
-            }
-            catch (ConnectorException ex)
-            {
-                _logger.LogWarning("Could not set individual address {address}, using the tunnel-assigned address instead: {message}", _knxOptions.IndividualAddress, ex.Message);
-            }
-        }
-
-        _logger.LogInformation("Connected to {host} as {address}", _knxOptions.Host, _knxBus.InterfaceConfiguration.IndividualAddress);
-    }
-
-    private async Task ProcessGroupMessageReceivedAsync(GroupEventArgs e, CancellationToken cancellationToken)
-    {
-        if (e.EventType != GroupEventType.ValueRead)
-        {
-            return;
-        }
-
-        if (_capabilityAddressMapping.TryGetValue(e.DestinationAddress, out var capability) is false)
-        {
-            return;
-        }
-
-        KnxTelegramValue? knxTelegramValue;
-        lock (_telegrams)
-        {
-            if (_telegrams.TryGetValue(capability, out knxTelegramValue) is false)
-            {
-                return;
-            }
-        }
-
-        await RespondGroupValueAsync(knxTelegramValue, cancellationToken);
-    }
-
-    private IEnumerable<KnxTelegramValue?> UpdateValues(MeterReading reading)
-    {
-        var e = reading.Electricity;
-        var g = reading.Gas;
-
-        lock (_telegramsLock)
-        {
-            // Electricity tariff - 1.024
-            yield return e.Tariff != ElectricityTariff.Unknown
-                ? Bit(ElectricityTariffKey, e.Tariff == ElectricityTariff.Tariff1)
-                : null;
-
-            // Energy delivered - 14.*
-            yield return Float(EnergyDeliveredTariff1Key, e.EnergyDeliveredTariff1?.KilowattHours);
-            yield return Float(EnergyDeliveredTariff2Key, e.EnergyDeliveredTariff2?.KilowattHours);
-
-            // Energy returned - 14.*
-            yield return Float(EnergyReturnedTariff1Key, e.EnergyReturnedTariff1?.KilowattHours);
-            yield return Float(EnergyReturnedTariff2Key, e.EnergyReturnedTariff2?.KilowattHours);
-
-            // Power delivered - 14.056 (W)
-            yield return Float(PowerDeliveredKey, e.PowerDelivered?.Watts);
-            yield return Float(PowerDeliveredL1Key, e.PhaseL1.PowerDelivered?.Watts);
-            yield return Float(PowerDeliveredL2Key, e.PhaseL2.PowerDelivered?.Watts);
-            yield return Float(PowerDeliveredL3Key, e.PhaseL3.PowerDelivered?.Watts);
-            yield return Float(PowerDeliveredCurrentAvgKey, e.PowerDeliveredCurrentAvg?.Watts);
-
-            // Power returned - 14.056 (W)
-            yield return Float(PowerReturnedKey, e.PowerReturned?.Watts);
-            yield return Float(PowerReturnedL1Key, e.PhaseL1.PowerReturned?.Watts);
-            yield return Float(PowerReturnedL2Key, e.PhaseL2.PowerReturned?.Watts);
-            yield return Float(PowerReturnedL3Key, e.PhaseL3.PowerReturned?.Watts);
-
-            // Current amperage - 14.019
-            yield return Float(CurrentL1Key, e.PhaseL1.Current?.Amperes);
-            yield return Float(CurrentL2Key, e.PhaseL2.Current?.Amperes);
-            yield return Float(CurrentL3Key, e.PhaseL3.Current?.Amperes);
-
-            // Current voltage - 14.027
-            yield return Float(VoltageL1Key, e.PhaseL1.Voltage?.Volts);
-            yield return Float(VoltageL2Key, e.PhaseL2.Voltage?.Volts);
-            yield return Float(VoltageL3Key, e.PhaseL3.Voltage?.Volts);
-
-            // Gas - 14.076
-            yield return Float(GasDeliveredKey, g.Delivered?.CubicMeters);
-
-            // Gas valve position - 1.001
-            yield return g.ValvePosition is not null
-                ? Bit(GasValvePositionKey, g.ValvePosition == 1)
-                : null;
-
-            // Power delivered max running month - 14.056 (W, like the other power values)
-            yield return Float(PowerDeliveredMaxRunningMonthKey, e.PowerDeliveredMaxRunningMonth?.Watts);
-        }
-    }
-
-    private KnxTelegramValue? Float(string capability, decimal? value)
-        => value is null ? null : UpdateValue(capability, BitConverter.GetBytes((float)value.Value));
 
     // 1-bit datapoint (DPT 1.xxx), sent as DPTBinary.
-    private KnxTelegramValue? Bit(string capability, bool value)
-        => UpdateValue(capability, BitConverter.GetBytes(value), isBit: true);
-
-    private KnxTelegramValue? UpdateValue(string capability, byte[] value, bool isBit = false)
-    {
-        if (_telegrams.TryGetValue(capability, out var knxTelegram) is false)
-        {
-            return null;
-        }
-
-        knxTelegram.IsBit = isBit;
-
-        if (knxTelegram.Value is not null && knxTelegram.Value.SequenceEqual(value))
-        {
-            return null;
-        }
-
-        _telegrams[capability].Value = value;
-        return _telegrams[capability];
-    }
-
-    private async Task RespondGroupValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
-    {
-        if (value.Value is null)
-        {
-            return;
-        }
-
-        if (_knxBus?.ConnectionState != BusConnectionState.Connected)
-        {
-            await ConnectAsync(cancellationToken);
-        }
-
-        if (_knxBus == null)
-        {
-            _logger.LogError("Something went wrong after connecting to knx client");
-            return;
-        }
-
-        var groupValue = value.ToGroupValue()!;
-        await _knxBus.RespondGroupValueAsync(value.Address, groupValue, MessagePriority.Low, cancellationToken);
-    }
-
-    private async Task WriteGroupValueAsync(KnxTelegramValue value, CancellationToken cancellationToken)
-    {
-        if (value.Value is null)
-        {
-            return;
-        }
-
-        if (_knxBus?.ConnectionState != BusConnectionState.Connected)
-        {
-            await ConnectAsync(cancellationToken);
-        }
-
-        if (_knxBus == null)
-        {
-            _logger.LogError("Something went wrong after connecting to knx client");
-            return;
-        }
-
-        var groupValue = value.ToGroupValue()!;
-        var writeCancellationToken = new CancellationTokenSource();
-
-        // TODO: retry
-        await WhenAny(
-            _knxBus.WriteGroupValueAsync(value.Address, groupValue, MessagePriority.Low, writeCancellationToken.Token),
-            Delay(TimeSpan.FromMilliseconds(100), cancellationToken));
-
-        writeCancellationToken.Cancel();
-    }
-
-    private static Dictionary<string, KnxTelegramValue> BuildTelegrams(KnxOptions knxOptions)
-    {
-        var telegrams = new Dictionary<string, KnxTelegramValue>();
-
-        foreach (var groupAddressMapping in GroupAddressMappingsFromOptions(knxOptions))
-        {
-            telegrams.Add(groupAddressMapping.Key, new KnxTelegramValue(groupAddressMapping.Value));
-        }
-
-        return telegrams;
-    }
-
-    private static Dictionary<GroupAddress, string> BuildCapabilityAddressMapping(KnxOptions knxOptions)
-        => GroupAddressMappingsFromOptions(knxOptions)
-            .ToDictionary(
-                groupAddressMapping => GroupAddress.Parse(groupAddressMapping.Value),
-                groupAddressMapping => groupAddressMapping.Key);
-
-    private static IEnumerable<KeyValuePair<string, string>> GroupAddressMappingsFromOptions(KnxOptions options)
-        => (options.GroupAddressMapping ?? new Dictionary<string, string>())
-            .Where(mapping => string.IsNullOrEmpty(mapping.Value) is false);
+    private void Bit(string capability, bool value)
+        => _publisher.Enqueue(capability, BitConverter.GetBytes(value), isBit: true);
 }

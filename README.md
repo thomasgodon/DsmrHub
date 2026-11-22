@@ -39,7 +39,8 @@ IMeterReadingSource (serial | simulator)
     → INotificationHandler<MeterReadingReceived>  ×  { MQTT, KNX, IoT Hub, UDP, Dashboard }
 ```
 
-Each sink handler is gated by its own `Enabled` flag, so disabled sinks are no-ops.
+Each sink handler is gated by its own `Enabled` flag, so disabled sinks are no-ops. The KNX handler
+only enqueues values; the actual bus writes run in the background (see Sink notes).
 
 ## Web dashboard
 
@@ -171,6 +172,12 @@ All configuration lives in `DsmrHub/appsettings.json`. Every sink is disabled by
   `PowerDeliveredMaxRunningMonth` (W float), MQTT `dsmr/electricity/power-delivered-max-running-month` (kW).
   `ElectricityTariff` (DPT 1.024, 1 = tariff 1) and `GasValvePosition` (DPT 1.001) are sent as 1-bit values.
   A requested `IndividualAddress` already held by another tunnel is logged as a warning and ignored.
+  The KNX handler only queues values; `KnxBusPublisher` (a hosted service that owns the tunnel) writes
+  them on its own background loop, so a slow or stuck bus never delays the serial ingestion. The queue
+  keeps only the newest value per address (outdated values are never sent) and skips values equal to the
+  last one on the bus. Each write waits up to 2 s for the interface's confirmation; failures are logged
+  and retried, and after 3 failures in a row the tunnel is reconnected. A write the bus acknowledges
+  negatively (no TP device listens to that address) still counts as sent and is logged once per address.
 - **IoT Hub** serializes the `MeterReading` to JSON with `System.Text.Json`.
 
 ## Known warnings
